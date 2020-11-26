@@ -1,1 +1,10 @@
-use `npm_pkgs.bat` if on windows and `npm_pkgs.sh` if on linux (could also work on mac, I didn't tested) to get all the necessary modules to use the bot.
+# Install dependencies
+
+Windows: run `npm_pkgs.bat`
+Linux (and MacOS maybe): run `npm_pkgs.sh`
+
+# Run
+
+```bash
+npm run dev
+```
