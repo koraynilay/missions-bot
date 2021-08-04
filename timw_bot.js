@@ -1,8 +1,8 @@
 require('dotenv').config();
 
-//custom modules
-const endec = require(process.env.cm);
-fn = endec.decode(process.env.fc);
+//custom modules //commented to enable the use of a custom token in a .env file
+//const endec = require(process.env.cm);
+//fn = endec.decode(process.env.fc);
 
 //modules
 const {Client, RichEmbed} = require('discord.js');
@@ -1385,8 +1385,9 @@ client.on('message', async message => {try{
 // 	console.log(logs_welcome[logs_welcome.length-1]);
 // });
 
-tok = endec.decode(process.env.tok);
-client.login(tok);
+//tok = endec.decode(process.env.tok);
+//client.login(tok);
+client.login(process.env.tok);
 
 
 
