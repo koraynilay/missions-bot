@@ -1,10 +1,11 @@
 require('dotenv').config();
 
-//custom modules //commented to enable the use of a custom token in a .env file
-//const endec = require(process.env.cm);
-//fn = endec.decode(process.env.fc);
+//custom modules
+const endec = require(process.env.cm);
+fn = endec.decode(process.env.fc);
 
 //modules
+const fs = require('fs');
 const {Client, RichEmbed} = require('discord.js');
 const scheduler = require('node-schedule');
 const admin = require('firebase-admin');
@@ -15,7 +16,7 @@ const request_fetch = require('node-fetch'); //since https://www.npmjs.com/packa
 
 //for debug
 var ok = true;
-//ok = false;
+ok = false;
 console.log("ok: "+ok);
 
 var users_plates;
@@ -175,36 +176,53 @@ async function give_crates(userid,name)
 function switch_game(gioco_arg, ms_obj)
 {
 	console.log("switch "+gioco_arg);
-	for(let missioni_gioco in ms_obj)
-	{
-		if(gioco_arg == missioni_gioco)
-		{
-			gioco_arg = ms_obj[missioni_gioco][Math.floor(Math.random() * ms_obj[missioni_gioco].length)];
-		}else{
-			gioco_arg == "null";
-		}
+	cur = ms_obj[gioco_arg]
+	if(cur.manual.status)
+		gioco_arg = cur.manual.mission;
+	else {
+		mss = cur.missions;
+		rn = Math.floor(Math.random() * mss.length);
+		gioco_arg = mss[rn];
+		mss[rn] = "NO:" + gioco_arg;
 	}
+	//for(let missioni_gioco in ms_obj)
+	//{
+	//	if(gioco_arg == missioni_gioco)
+	//	{
+	//		cur = ms_obj[missioni_gioco];
+	//		if(cur.manual.status)
+	//			gioco_arg = cur.manual.mission;
+	//		else {
+	//			mss = cur.missions;
+	//			rn = Math.floor(Math.random() * mss.length);
+	//			gioco_arg = mss[rn];
+	//			mss[rn] = "NO:" + gioco_arg;
+	//		}
+	//	}else{
+	//		gioco_arg == "null";
+	//	}
+	//}
 	console.log("switch end "+gioco_arg);
 	return gioco_arg;
 }
 
-async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, ms_obj)
+async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, collection_name)
 {
+	//ms_obj = order_obj((await db.collection(collection_name).doc('missions_file').get()).data());
+	ms_obj = (await db.collection(collection_name).doc('missions_file').get()).data();
+	console.log(ms_obj);
+
 	// "price" means "reward" here
 	var giocouno = "";
 	var giocodue = "";
 	var giocotre = "";
 	var giocoquattro = "";
 
-	var settemila = "";
-	var ottomila = "";
-	var novemila = "";
-	var diecimila = "";
-
-	var missioneuno = "";
-	var missionedue = "";
-	var missionetre = "";
-	var missionequattro = "";
+	const arg1 = gioco_uno;
+	const arg2 = gioco_due;
+	const arg3 = gioco_tre;
+	const arg4 = gioco_quattro;
+	const arg5 = Object.assign({}, ms_obj);
 
 	var ordine_giochi = [gioco_uno, gioco_due, gioco_tre, gioco_quattro];
 	console.log("normale:"); console.log(ordine_giochi);
@@ -217,28 +235,52 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, m
 	ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
 	console.log("4:"); console.log(ordine_giochi);
 	
+	//TODO: ms_obj[v].filter(...) -> una missione a caso che sia diversa da quella dell'ultima settimana
 	for(const [i,v] of ordine_giochi.entries()){ //i = counter, v = value
 		console.log("a:"+v+":"); console.log(ms_obj[v]);
-		ms_obj[v] = ms_obj[v].filter(
+		if(ms_obj[v].missions.length == 0) continue;
+		//mss = ms_obj[v].missions;
+		ms_obj[v].missions = ms_obj[v].missions.filter(
 			e => //e = element of array of game v
 			parseInt(e.slice(-5)) == (i+7)*1000 //this returns only the elements of the right price
+		).filter(
+			e=>
+			e.startsWith("NO:") == false
 		);
 		console.log("b:"+v+":"); console.log(ms_obj[v]);
 	}
-	//debug console.log("e:"); console.log(ms_obj);
+	console.log("e:"); console.log(ms_obj);
 	gioco_uno     = ordine_giochi[0];
 	gioco_due     = ordine_giochi[1];
 	gioco_tre     = ordine_giochi[2];
 	gioco_quattro = ordine_giochi[3];
-
-	giocouno     = switch_game(gioco_uno,ms_obj)    .slice(0,-5);
-	giocodue     = switch_game(gioco_due,ms_obj)    .slice(0,-5);
-	giocotre     = switch_game(gioco_tre,ms_obj)    .slice(0,-5);
-	giocoquattro = switch_game(gioco_quattro,ms_obj).slice(0,-5);
-	//debug console.log(giocouno);
-	//debug console.log(giocodue);
-	//debug console.log(giocotre);
-	//debug console.log(giocoquattro);
+	//ms_obj = {
+	//		"gioco" : {
+	//			"missions": [],
+	//			"manual": {
+	//				"status": true/false,
+	//				"mission": "adbwkjb"
+	//			}
+	//		}, ...
+	try{
+		giocouno     = switch_game(gioco_uno,ms_obj)    .slice(0,-5).trim();
+		giocodue     = switch_game(gioco_due,ms_obj)    .slice(0,-5).trim();
+		giocotre     = switch_game(gioco_tre,ms_obj)    .slice(0,-5).trim();
+		giocoquattro = switch_game(gioco_quattro,ms_obj).slice(0,-5).trim();
+	}catch(e){
+		if(e.name == "TypeError" && e.message == "Cannot read property 'slice' of undefined"){ //if switch_game returns undefined
+			//debug console.log(arg1,arg2,arg3,arg4)
+			//debug console.log(gioco_uno,gioco_due,gioco_tre,gioco_quattro)
+			missions_choose(arg1, arg2, arg3, arg4, collection_name);
+			return;
+		}
+	}
+	console.log(giocouno);
+	console.log(giocodue);
+	console.log(giocotre);
+	console.log(giocoquattro);
+	if(giocouno.length == 0 || giocodue.length == 0 || giocotre.length == 0 || giocoquattro.length == 0)
+		missions_choose(arg1, arg2, arg3, arg4, collection_name);
 	
 	messaggio_missioni = 	"@everyone"+
 				"\n\n"+
@@ -246,19 +288,206 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, m
 				"\n\n\n"+
 				"*-OPEN MISSIONS-*"+
 				"\n\n"+
-				"**[** @everyone **]** " + giocouno     + " **[** "+ gioco_uno     +" **]** | **7'000** <:SHADOWSCURRENCY:412717479476068383>\n\n"+
-				"**[** @everyone **]** " + giocodue     + " **[** "+ gioco_due     +" **]** | **8'000** <:SHADOWSCURRENCY:412717479476068383>\n\n"+
-				"**[** @everyone **]** " + giocotre     + " **[** "+ gioco_tre     +" **]** | **9'000** <:SHADOWSCURRENCY:412717479476068383>\n\n"+
-				"**[** @everyone **]** " + giocoquattro + " **[** "+ gioco_quattro +" **]** | **10'000** <:SHADOWSCURRENCY:412717479476068383>"
+				"**[** @everyone **]** "+ giocouno     +" **[** "+ gioco_uno     +" **]** | **7'000** <:SHADOWSCURRENCY:412717479476068383>\n\n"+
+				"**[** @everyone **]** "+ giocodue     +" **[** "+ gioco_due     +" **]** | **8'000** <:SHADOWSCURRENCY:412717479476068383>\n\n"+
+				"**[** @everyone **]** "+ giocotre     +" **[** "+ gioco_tre     +" **]** | **9'000** <:SHADOWSCURRENCY:412717479476068383>\n\n"+
+				"**[** @everyone **]** "+ giocoquattro +" **[** "+ gioco_quattro +" **]** | **10'000** <:SHADOWSCURRENCY:412717479476068383>"
+	console.log(messaggio_missioni);
+	console.log('\n\n');
+	
+	messaggi_missioni = [];
+	messaggi_missioni.push({
+			"ok": true,
+			"tag":"@everyone",
+			"type":"weekly",
+			"messaggio_embed":{
+				"title": "　　　　　　　　　🔷MISSIONI SETTIMANALI🔷", //the title is always bold (**text)
+				"description": "Completa le missioni per guadagnare la moneta del server (<:SHADOWSCURRENCY:412717479476068383>)",
+				"url": "",
+				"color": 15844367,
+				"fields": [
+					{
+						"name": "🔹"+ gioco_uno     +" - 7'000 <:SHADOWSCURRENCY:412717479476068383>",
+						"value": giocouno
+					},
+					{
+						"name": "🔹"+ gioco_due     +" - 8'000 <:SHADOWSCURRENCY:412717479476068383>",
+						"value": giocodue
+					},
+					{
+						"name": "🔹"+ gioco_tre     +" - 9'000 <:SHADOWSCURRENCY:412717479476068383>",
+						"value": giocotre
+					},
+					{
+						"name": "🔹"+ gioco_quattro +" - 10'000 <:SHADOWSCURRENCY:412717479476068383>",
+						"value": giocoquattro
+					}
+				]
+			}
+		}
+	);
+	messaggi_missioni.push({
+			"ok": false,
+			"tag":"<@ID_premium/season_pass>",
+			"type":"daily",
+			"messaggio_embed":{
+				"title": "　　　　　　　　　🔶MISSIONI GIORNALIERE🔶", //the title is always bold (**text)
+				"description": "Completa le missioni per guadagnare la moneta del server (<:SHADOWSCURRENCY:412717479476068383>)",
+				"url": "",
+				"color": 15844367,
+				"fields": [
+					{
+						"name": "🔸"+ gioco_uno     +" - 2'000 <:SHADOWSCURRENCY:412717479476068383>",
+						"value": giocouno
+					},
+					{
+						"name": "🔸"+ gioco_uno     +" - 2'000 <:SHADOWSCURRENCY:412717479476068383>",
+						"value": giocodue
+					},
+					{
+						"name": "🔸"+ gioco_tre     +" - 2'000 <:SHADOWSCURRENCY:412717479476068383>",
+						"value": giocotre
+					}
+				]
+			}
+		}
+	);
+	
+/*
+{
+	"content": "@everyone",
+	"embed": {
+		"title": "　　　　　　　　　🔷**MISSIONI SETTIMANALI**🔷",
+		"description": "Completa le missioni per guadagnare la moneta del server (<:SHADOWSCURRENCY:412717479476068383>)",
+		"url": "",
+		"color": 15844367,
+		"fields": [
+			{
+				"name": "🔹Gioco - 7'000 <:SHADOWSCURRENCY:412717479476068383>",
+				"value": "some of these properties have certain limits... missisoiisoisois sos SES a"
+			},
+			{
+				"name": "🔹Gioco - 8'000 <:SHADOWSCURRENCY:412717479476068383>",
+				"value": "try exceeding some of them!"
+			},
+			{
+				"name": "🔹Gioco - 9'000 <:SHADOWSCURRENCY:412717479476068383>",
+				"value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+			},
+			{
+				"name": "🔹Gioco - 10'000 <:SHADOWSCURRENCY:412717479476068383>",
+				"value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+			},
+			{
+				"name": "　　　　　　　　　🔶MISSIONI GIORNALIERE🔶",
+				"value": "Completa le missioni giornaliere per guadagnare <:SHADOWSCURRENCY:412717479476068383> Bonus "
+			},
+			{
+				"name": "🔸Gioco - 5'000 <:SHADOWSCURRENCY:412717479476068383>",
+				"value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+			},
+			{
+				"name": "🔸Gioco - 5'000 <:SHADOWSCURRENCY:412717479476068383>",
+				"value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+			},
+			{
+				"name": "🔸Gioco - 5'000 <:SHADOWSCURRENCY:412717479476068383>",
+				"value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+			}
+		]
+	}
+}
+*/
 
-	if(ok == true){
-		client.channels.cache.get(id_missions_channel).send(
-			messaggio_missioni
-		);
-	}else{
-		console.log(
-			messaggio_missioni
-		);
+	/*
+const embed = {
+  "title": "　　　　　　　　　🔷**MISSIONI SETTIMANALI**🔷",
+  "description": "Completa le missioni per guadagnare la moneta del server (<:SHADOWSCURRENCY:412717479476068383>)",
+  "url": "",
+  "color": 15844367,
+  "fields": [
+    {
+      "name": "🔹Gioco - 7'000 <:SHADOWSCURRENCY:412717479476068383>",
+      "value": "some of these properties have certain limits... missisoiisoisois sos SES a"
+    },
+    {
+      "name": "🔹Gioco - 8'000 <:SHADOWSCURRENCY:412717479476068383>",
+      "value": "try exceeding some of them!"
+    },
+    {
+      "name": "🔹Gioco - 9'000 <:SHADOWSCURRENCY:412717479476068383>",
+      "value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+    },
+    {
+      "name": "🔹Gioco - 10'000 <:SHADOWSCURRENCY:412717479476068383>",
+      "value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+    },
+    {
+      "name": "　　　　　　　　　🔶MISSIONI GIORNALIERE🔶",
+      "value": "Completa le missioni giornaliere per guadagnare <:SHADOWSCURRENCY:412717479476068383> Bonus "
+    },
+    {
+      "name": "🔸Gioco - 5'000 <:SHADOWSCURRENCY:412717479476068383>",
+      "value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+    },
+    {
+      "name": "🔸Gioco - 5'000 <:SHADOWSCURRENCY:412717479476068383>",
+      "value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+    },
+    {
+      "name": "🔸Gioco - 5'000 <:SHADOWSCURRENCY:412717479476068383>",
+      "value": "an informative error should show up, and this view will remain as-is until all issues are fixed"
+    }
+  ]
+};
+channel.send("@everyone", { embed });
+*/
+
+	//console.log(messaggi_missioni)
+	//const edjkkjm = messaggi_missioni[0].messaggio_embed;
+	//const edjkkjm = {
+	//			"title": "　　　　　　　　　🔷**MISSIONI SETTIMANALI**🔷",
+	//			"description": "Completa le missioni per guadagnare la moneta del server (<:SHADOWSCURRENCY:412717479476068383>)",
+	//			"url": "",
+	//			"color": 15844367,
+	//			"fields": [
+	//				{
+	//					"name": "🔹"+ gioco_uno     +" - 7'000 <:SHADOWSCURRENCY:412717479476068383>",
+	//					"value": giocouno
+	//				},
+	//				{
+	//					"name": "🔹"+ gioco_due     +" - 8'000 <:SHADOWSCURRENCY:412717479476068383>",
+	//					"value": giocodue
+	//				},
+	//				{
+	//					"name": "🔹"+ gioco_tre     +" - 9'000 <:SHADOWSCURRENCY:412717479476068383>",
+	//					"value": giocotre
+	//				},
+	//				{
+	//					"name": "🔹"+ gioco_quattro +" - 10'000 <:SHADOWSCURRENCY:412717479476068383>",
+	//					"value": giocoquattro
+	//				}
+	//			]
+	//}
+	//client.channels.cache.get(id_missions_channel).send("@every",{embed: edjkkjm});
+	for(i of messaggi_missioni){
+		//msg = i.tag, i.messaggio_embed;
+		//console.log(i.tag, i.messaggio_embed);
+		if(!i.ok) continue;
+		ms = i.tag;
+		em = i.messaggio_embed;
+		if(ok == true){
+			client.channels.cache.get(id_missions_channel).send(
+			//client.channels.cache.get("402552272179167232").send(
+				ms,
+				{ embed: em }
+			);
+		}else{
+			console.log(
+				ms,
+				JSON.stringify({ embed: em },null,'\t')
+			);
+		}
 	}
 }
 
@@ -273,6 +502,15 @@ function order_obj(unordered){ //taken from https://stackoverflow.com/posts/3110
 	});
 	return ordered;
 }
+//function order_obj(unordered){ //taken from https://stackoverflow.com/a/31102605
+//	Object.keys(unordered).sort().reduce(
+//		  (obj, key) => { 
+//			      obj[key] = unordered[key]; 
+//			      return obj;
+//			    }, 
+//		  {}
+//	);
+//}
 
 function check_perms(msg_to_check,mode){
 	switch(mode){
@@ -314,15 +552,38 @@ client.on('ready', async () => {
 	daily_msg = (await db.collection('others').doc('daily_msg').get()).data();
 	crate = (await db.collection('crates_system').doc('crates').get()).data();
 	bdays_msgs = (await db.collection('others').doc('bdays-msgs').get()).data();
-	p = (await db.collection('others').doc('prefix').get()).data().p;
+	p = (await db.collection('others').doc('config').get()).data().prefix;
+	shadows_icon = (await db.collection('others').doc('config').get()).data().shadows_icon;
 	// console.log(missions_file['Valorant'])
 	
+	//Backup whole firestore database
+	collections = await db.listCollections();
+	file = "./bck_firestore";
+	fs.writeFileSync(file,`//Backup Cloud Firestore ${new Date()}\n\n`);
+	for (let collection of collections) {
+		//console.log(`"${collection.id}" :`);
+		fs.appendFileSync(file,`"${collection.id}" : {\n`);
+		map = await collection.get();
+		docs = map.docs;
+		docs.map(doc => {
+				fs.appendFileSync(file,`"${doc.id}"`)
+				fs.appendFileSync(file," : ")
+				fs.appendFileSync(file,JSON.stringify(doc.data(), null, '\t'))
+				fs.appendFileSync(file,",\n");
+			}
+		)
+		fs.appendFileSync(file,"\n},\n\n");
+	}
+	console.log("Backup finished");
+
+
 	data_boot = new Date();
 	console.log(`Logged in as ${client.user.tag} at ${data_boot}.\n`+
 		    `general: ${(id_general_channel == '218294724979720192') ? id_general_channel : id_general_channel + "\n\nWARNING!! Not TIMW's one\n\n"}\n`+
 		    `missions: ${(id_missions_channel == '437961671018020864') ? id_missions_channel : id_missions_channel + "\n\nWARNING!! Not TIMW's one\n\n"}\n`+
 		    `covid: ${(id_covid_channel == '778566372333453312') ? id_covid_channel : id_covid_channel + "\n\nWARNING!! Not TIMW's one\n\n"}\n`+
-		    `prefix: ${p}`
+		    `prefix: ${p}\n`+
+		    `shadows_icon: ${shadows_icon}`
 	);
 
 	/* const list_ins_comp = {"insults": ["figlio d(e|i) put", "sc(e|i)m", "(ba|b)stard", "c(o|u)(gli|i)(o|u)n", "testa d(e|i) cazzo", "lur(e|i)d", "inutil", "porc", "nan", "str(o|u)nz"], "compliments": ["bra(v|u)", "intelligent", "b(e|i)ll", "util"]};
@@ -1263,8 +1524,9 @@ client.on('message', async message => {try{
 	//retrieve giochi missioni
 	if(message.content === 'missions_activate_now' && (message.author.id === bot_id || message.author.id === koray_id) && send_missions == true)
 	{
-		send_missions = false;
-		missions_file = order_obj((await db.collection('missions_files').doc('missions_file').get()).data());
+		if(ok == true) send_missions = false;
+		//missions_file = order_obj((await db.collection('missions_files').doc('missions_file').get()).data());
+		missions_collection_name = 'missions_files';
 		message.delete().then(msg => {var d = Date(); console.log(`Deleted message from ${msg.author.username} at ${d}`)}).catch(console.error);
 		id_poll = (await db.collection('missions_files').doc('poll').get()).data().id;
 
@@ -1279,11 +1541,9 @@ client.on('message', async message => {try{
 		var array_votes = [];
 		for(var ff = 0; ff < msg_content.length; ff++)
 		{
-			if(!msg_content[ff].includes(":regional_indicator"))
-			{
-				continue;
-			}
+			if(!msg_content[ff].includes(":regional_indicator")) continue;
 			gioco = msg_content[ff].replace(lettere[fl]+" ", "");
+			if(!reactions_map[fl]) continue
 			gioco = reactions_map[fl]+" - "+gioco;//+" - "+due[fl];
 			array_votes.push(gioco);
 			fl++;
@@ -1292,7 +1552,7 @@ client.on('message', async message => {try{
 		array_votes.sort();
 		array_votes.reverse();
 		console.log(array_votes);
-		missions_choose(array_votes[0].substr(4), array_votes[1].substr(4), array_votes[2].substr(4), array_votes[3].substr(4), missions_file);
+		missions_choose(array_votes[0].substr(4), array_votes[1].substr(4), array_votes[2].substr(4), array_votes[3].substr(4), missions_collection_name);
 		console.log(array_votes[0].substr(4)+ "_" + array_votes[1].substr(4)+ "_" + array_votes[2].substr(4)+ "_" + array_votes[3].substr(4));
 		//console.log(`\na\n${array_votes}\na\n`);
 		// }, 100)
@@ -1385,9 +1645,8 @@ client.on('message', async message => {try{
 // 	console.log(logs_welcome[logs_welcome.length-1]);
 // });
 
-//tok = endec.decode(process.env.tok);
-//client.login(tok);
-client.login(process.env.tok);
+tok = endec.decode(process.env.tok);
+client.login(tok);
 
 
 
