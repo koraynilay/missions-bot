@@ -1395,12 +1395,8 @@ client.on('message', async message => {try{
 				message.channel.messages.fetch(id_missions).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_missions (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
 			}, 3000)
 			setTimeout(()=>{ //poll
-				var giochi_poll = "";
-				for(let missioni_gioco in missions_file) {
-					giochi_poll = giochi_poll+missioni_gioco+",";
-				}
-				client.channels.cache.get(id_missions_channel).send(p+'poll Prossimi giochi per le missioni (le missioni saranno sui 4 giochi più votati);'+giochi_poll.substr(0,giochi_poll.length-1));
-				console.log(`sent poll at ${Date()}`);
+				client.channels.cache.get(id_missions_channel).send('poll_missions_send');
+				console.log(`sent poll_missions_send at ${Date()}`);
 			}, 5000)
 			setTimeout(async ()=>{ //avviso in #general
 				client.channels.cache.get(id_general_channel).send('@everyone\n\n**NUOVE Missioni Settimanali disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.');
