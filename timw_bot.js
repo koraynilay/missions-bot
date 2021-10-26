@@ -226,7 +226,10 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 	gioco_quattro = ordine_giochi[3];
 	//ms_obj = {
 	//		"gioco" : {
-	//			"missions": [],
+	//			"missions": {
+	//				"modalita": [],
+	//				"modalita2": []
+	//			},
 	//			"manual": {
 	//				"status": true/false,
 	//				"mission": "adbwkjb"
@@ -495,13 +498,13 @@ client.on('ready', async () => {
 	p = (await db.collection('others').doc('config').get()).data().prefix;
 	shadows_icon = (await db.collection('others').doc('config').get()).data().shadows_icon;
 	// console.log(missions_file['Valorant'])
-	//may be useful// toup = JSON.parse(fs.readFileSync('./bck_firestore'));
-	//may be useful// //console.log(toup);
-	//may be useful// for(b in toup.others){
-	//may be useful// 	console.log(toup.others[b]);
-	//may be useful// 	db.collection('others').doc(b).set(toup.others[b]);
-	//may be useful// }
-	//may be useful// return
+	toup = JSON.parse(fs.readFileSync('./bck_firestore'));
+	//console.log(toup);
+	for(b in toup.others){
+		console.log(b+":",toup.others[b]);
+		//db.collection('others').doc(b).set(toup.others[b]);
+	}
+	return
 	
 	//Backup whole firestore database
 	collections = await db.listCollections();
@@ -1399,7 +1402,7 @@ client.on('message', async message => {try{
 				console.log(`sent poll_missions_send at ${Date()}`);
 			}, 5000)
 			setTimeout(async ()=>{ //avviso in #general
-				client.channels.cache.get(id_general_channel).send('@everyone\n\n**NUOVE Missioni Settimanali disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.');
+				client.channels.cache.get(id_general_channel).send("@everyone\n\n**NUOVE Missioni Settimanali disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.");
 				console.log(`sent alert_missions at ${Date()}`);
 				(await client.users.fetch(koray_id)).send("check <#437961671018020864>");
 				send_missions = true;
