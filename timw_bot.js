@@ -429,6 +429,8 @@ function check_perms(msg_to_check,mode){
 			return (msg_to_check.guild && (msg_to_check.member.roles.cache.get(role_econ_moderator) || msg_to_check.member.roles.cache.get(role_capo_clan) || msg_to_check.member.roles.cache.get(role_admin) || msg_to_check.member.roles.cache.get(role_bot) || msg_to_check.member.roles.cache.get(role_moderator)))
 		case 'd': //only dm
 			return (msg_to_check.channel.type == 'dm' && (msg_to_check.author.id == koray_id || msg_to_check.author.id == triccotricco_id || msg_to_check.author.id == lux_id || msg_to_check.author.id == xevery_id))
+		case 'k':
+			return (msg_to_check.author.id == koray_id)
 	}
 }
 
@@ -655,6 +657,16 @@ client.on('message', async message => {try{
 //		client.channels.cache.get(id_general_channel).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
 //	}
 	console.log("'message' event received");
+	if(message.content.startsWith(p+'scam')){
+		if(check_perms(message,'a')){
+			scam_msg = await message.channel.messages.fetch(message.content.split(' ')[1]);
+			(await message.guild.members.fetch(scam_msg.author)).kick("Scam: "+scam_msg.content);
+			console.log("Scam content:"+scam_msg.content);
+			(await client.users.fetch(koray_id)).send(`${Date()}: deleted \`\`\`${scam_msg.content}\`\`\` from ${scam_msg.author.tag} (${scam_msg.author.id})`);
+			await scam_msg.delete();
+			delete_all_scam();
+		}
+	}
 	if(message.content == p+'status-verbose'){
 		daily_msg = (await db.collection('others').doc('daily_msg').get()).data();
 		users_plates = (await db.collection('others').doc('users_plates').get()).data();
@@ -1272,8 +1284,7 @@ client.on('message', async message => {try{
 	if(message.author.id == bot_id && message.content == "@everyone" &&
 			  message.embeds[0].title == '🔷MISSIONI SETTIMANALI🔷' &&
 			  message.embeds[0].color == 15844367 &&
-			  message.embeds[0].description == 'Completa le missioni per guadagnare la moneta del server (<:shadowsdesign:893222216966225960>)' &&
-			  message.embeds[0].author == "koraynilay") {
+			  message.embeds[0].description == 'Completa le missioni per guadagnare la moneta del server (<:shadowsdesign:893222216966225960>)') {
 		db.collection('missions_files').doc('missions').set({id: message.id});
 		console.log("scritto_missioni: "+message.id);
 	}
