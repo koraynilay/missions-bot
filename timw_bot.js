@@ -191,8 +191,8 @@ function switch_game(gioco_arg, ms_obj) {
 	console.log("switch ",gioco_arg);
 	cur = ms_obj[gioco_arg];
 	gioco_arg = {
-		miss: "",
-		mode: ""
+		miss: undefined,
+		mode: undefined
 	};
 	if(cur.manual.status) {
 		gioco_arg.miss = cur.manual.mission;
@@ -216,20 +216,20 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 
 	// "price" means "reward" here
 	var giocouno = {
-		miss: "",
-		mode: ""
+		miss: undefined,
+		mode: undefined
 	};
 	var giocodue = {
-		miss: "",
-		mode: ""
+		miss: undefined,
+		mode: undefined
 	};
 	var giocotre = {
-		miss: "",
-		mode: ""
+		miss: undefined,
+		mode: undefined
 	};
 	var giocoquattro = {
-		miss: "",
-		mode: ""
+		miss: undefined,
+		mode: undefined
 	};
 
 	const arg1 = gioco_uno;
@@ -282,7 +282,6 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 	//				"mission": "adbwkjb"
 	//			}
 	//		}, ...
-	try{
 		giocouno	= switch_game(gioco_uno,ms_obj)
 		giocodue	= switch_game(gioco_due,ms_obj)
 		giocotre	= switch_game(gioco_tre,ms_obj)
@@ -296,6 +295,15 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 		//giocoquattro.miss	= switch_game(gioco_quattro,ms_obj).miss.slice(0,-5).trim()
 		//giocoquattro.mode	= switch_game(gioco_quattro,ms_obj).mode
 		console.log(giocouno, giocodue, giocotre, giocoquattro);
+	//console.log(giocouno);
+	//console.log(giocodue);
+	//console.log(giocotre);
+	//console.log(giocoquattro);
+	try{
+		giocouno.miss     = giocouno.miss    .slice(0,-5).trim()
+		giocodue.miss     = giocodue.miss    .slice(0,-5).trim() 
+		giocotre.miss     = giocotre.miss    .slice(0,-5).trim() 
+		giocoquattro.miss = giocoquattro.miss.slice(0,-5).trim()
 	}catch(e){
 		if(e.name == "TypeError" && e.message.match(/Cannot.*slice/)){ //if switch_game returns undefined
 			//debug console.log(arg1,arg2,arg3,arg4)
@@ -304,16 +312,8 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 			return;
 		}
 	}
-	//console.log(giocouno);
-	//console.log(giocodue);
-	//console.log(giocotre);
-	//console.log(giocoquattro);
-	giocouno.miss     = giocouno.miss    .slice(0,-5).trim()
-	giocodue.miss     = giocodue.miss    .slice(0,-5).trim() 
-	giocotre.miss     = giocotre.miss    .slice(0,-5).trim() 
-	giocoquattro.miss = giocoquattro.miss.slice(0,-5).trim()
-	if(giocouno.length == 0 || giocodue.length == 0 || giocotre.length == 0 || giocoquattro.length == 0)
-		missions_choose(arg1, arg2, arg3, arg4, collection_name);
+	//if(giocouno.length == 0 || giocodue.length == 0 || giocotre.length == 0 || giocoquattro.length == 0)
+	//	missions_choose(arg1, arg2, arg3, arg4, collection_name);
 	
 	messaggio_missioni = 	"@everyone"+
 				"\n\n"+
