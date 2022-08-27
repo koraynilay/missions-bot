@@ -13,6 +13,7 @@ const firebase = require(fn);
 const mjs = require('mathjs');
 const shlex = require('shlex');
 const request_fetch = require('node-fetch'); //since https://www.npmjs.com/package/request and https://www.npmjs.com/package/request-promise-native are deprecated
+//const dsbck = require('discord-backup');
 
 //for debug
 var ok = true;
@@ -33,8 +34,10 @@ const lettere = [":regional_indicator_a:", ":regional_indicator_b:", ":regional_
 const koray_id = '295941261141999617';
 const sowl_id = '481785064590671872';
 const triccotricco_id = '181442842944733184';
-const lux_id = '301750916925882378';
+//const lux_id = '301750916925882378';
+const lux_id = '894127383517470735';
 const xevery_id = '426052055589978112';
+const wolf_id = '901794755720118272';
 const creep_id = '543157486614478859';
 const cb_id = '245253128339849217';
 const gu_id = '405309646040072195';
@@ -46,8 +49,11 @@ const role_moderator = '255759266097397760';
 const role_econ_moderator = '489514701361774612';
 const role_bot = '255996099851059200';
 
+const id_premium_base = '1005805415495381063'
+const id_premium_avanzato = '1005808061694365796'
+
 const id_missions_channel = '437961671018020864'; //'686564768915521566';
-const id_general_channel = '218294724979720192'; //'686564781913800767';
+const id_general_channel = '686564781913800767'; //'218294724979720192';
 const id_covid_channel = '903310173429461062';
 var send_missions = true;
 
@@ -182,7 +188,7 @@ function rb(obj){
 	return Object.keys(obj)[Math.floor(Math.random() * Object.keys(obj).length)];
 }
 
-function switch_game(gioco_arg, ms_obj) {
+function switch_game(gioco_arg, ms_obj, daily) {
 	/* gioco_arg = {
 	 * 		"mis":"missione"
 	 * 		"mod":"modalità"
@@ -197,6 +203,12 @@ function switch_game(gioco_arg, ms_obj) {
 	if(cur.manual.status) {
 		gioco_arg.miss = cur.manual.mission;
 		gioco_arg.mode = cur.manual.mode;
+	} else if(daily) {
+		mss =  cur.daily;
+		k = rb(cur.daily);
+		gioco_arg.miss = rn(cur.daily[k]);
+		console.log(gioco_arg.miss);
+		gioco_arg.mode = k;
 	} else {
 		mss =  cur.missions;
 		k = rb(cur.missions);
@@ -209,28 +221,11 @@ function switch_game(gioco_arg, ms_obj) {
 	return gioco_arg;
 }
 
-async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, collection_name) {
+async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, collection_name, daily) {
 	//ms_obj = order_obj((await db.collection(collection_name).doc('missions_file').get()).data());
 	ms_obj =           (await db.collection(collection_name).doc('missions_file').get()).data();
 	console.log(ms_obj);
-
-	// "price" means "reward" here
-	var giocouno = {
-		miss: undefined,
-		mode: undefined
-	};
-	var giocodue = {
-		miss: undefined,
-		mode: undefined
-	};
-	var giocotre = {
-		miss: undefined,
-		mode: undefined
-	};
-	var giocoquattro = {
-		miss: undefined,
-		mode: undefined
-	};
+	messaggi_missioni = [];
 
 	const arg1 = gioco_uno;
 	const arg2 = gioco_due;
@@ -238,170 +233,217 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 	const arg4 = gioco_quattro;
 	const arg5 = Object.assign({}, ms_obj);
 
-	var ordine_giochi = [gioco_uno, gioco_due, gioco_tre, gioco_quattro];
-	console.log("normale:"); console.log(ordine_giochi);
-	ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
-	console.log("1:"); console.log(ordine_giochi);
-	ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
-	console.log("2:"); console.log(ordine_giochi);
-	ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
-	console.log("3:"); console.log(ordine_giochi);
-	ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
-	console.log("4:"); console.log(ordine_giochi);
-	
-	//TODO: ms_obj[v].filter(...) -> una missione a caso che sia diversa da quella dell'ultima settimana
-	for(const [i,v] of ordine_giochi.entries()){ //i = counter, v = value
-		console.log("a:"+v+":"); console.log(ms_obj[v]);
-		for(let k in ms_obj[v].missions){
-			if(ms_obj[v].missions[k].length == 0) continue;
-			//mss = ms_obj[v].missions;
-			ms_obj[v].missions[k] = ms_obj[v].missions[k].filter(
-				e => //e = element of array of game v
-				parseInt(e.slice(-5)) == (i+7)*1000 //this returns only the elements of the right price
-			).filter(
-				e=>
-				e.startsWith("NO:") == false
-			);
+	if(!daily) {
+		// "price" means "reward" here
+		var giocouno = {
+			miss: undefined,
+			mode: undefined
+		};
+		var giocodue = {
+			miss: undefined,
+			mode: undefined
+		};
+		var giocotre = {
+			miss: undefined,
+			mode: undefined
+		};
+		var giocoquattro = {
+			miss: undefined,
+			mode: undefined
+		};
+
+		var ordine_giochi = [gioco_uno, gioco_due, gioco_tre, gioco_quattro];
+		console.log("normale:"); console.log(ordine_giochi);
+		ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
+		console.log("1:"); console.log(ordine_giochi);
+		ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
+		console.log("2:"); console.log(ordine_giochi);
+		ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
+		console.log("3:"); console.log(ordine_giochi);
+		ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
+		console.log("4:"); console.log(ordine_giochi);
+
+		arr_prizes = [1000,1200,1200,1600];
+		
+		//TODO: ms_obj[v].filter(...) -> una missione a caso che sia diversa da quella dell'ultima settimana
+		for(const [i,v] of ordine_giochi.entries()){ //i = counter, v = value
+			console.log("a:"+v+":"); console.log(ms_obj[v]);
+			for(let k in ms_obj[v].missions){
+				if(ms_obj[v].missions[k].length == 0) continue;
+				//mss = ms_obj[v].missions;
+				ms_obj[v].missions[k] = ms_obj[v].missions[k].filter(
+					e => //e = element of array of game v
+					parseInt(e.slice(-5)) == arr_prizes[i] //this returns only the elements of the right price
+				).filter(
+					e=>
+					e.startsWith("NO:") == false
+				);
+			}
+			console.log("b:"+arr_prizes[i]+"+:"+v+":"); console.log(ms_obj[v]);
 		}
-		console.log("b:"+(i+7)+"+:"+v+":"); console.log(ms_obj[v]);
-	}
-	//return 
-	//console.log("e:"); console.log(ms_obj);
-	gioco_uno     = ordine_giochi[0];
-	gioco_due     = ordine_giochi[1];
-	gioco_tre     = ordine_giochi[2];
-	gioco_quattro = ordine_giochi[3];
-	//ms_obj = {
-	//		"gioco" : {
-	//			"missions": {
-	//				"modalita": [],
-	//				"modalita2": []
-	//			},
-	//			"manual": {
-	//				"status": true/false,
-	//				"mission": "adbwkjb"
-	//			}
-	//		}, ...
-		giocouno	= switch_game(gioco_uno,ms_obj)
-		giocodue	= switch_game(gioco_due,ms_obj)
-		giocotre	= switch_game(gioco_tre,ms_obj)
-		giocoquattro	= switch_game(gioco_quattro,ms_obj)
-		//giocouno.miss		= switch_game(gioco_uno,ms_obj)    .miss.slice(0,-5).trim()
-		//giocouno.mode		= switch_game(gioco_uno,ms_obj)    .mode
-		//giocodue.miss		= switch_game(gioco_due,ms_obj)    .miss.slice(0,-5).trim()
-		//giocodue.mode		= switch_game(gioco_due,ms_obj)    .mode
-		//giocotre.miss		= switch_game(gioco_tre,ms_obj)    .miss.slice(0,-5).trim()
-		//giocotre.mode		= switch_game(gioco_tre,ms_obj)    .mode
-		//giocoquattro.miss	= switch_game(gioco_quattro,ms_obj).miss.slice(0,-5).trim()
-		//giocoquattro.mode	= switch_game(gioco_quattro,ms_obj).mode
+		//return 
+		//console.log("e:"); console.log(ms_obj);
+		gioco_uno     = ordine_giochi[0];
+		gioco_due     = ordine_giochi[1];
+		gioco_tre     = ordine_giochi[2];
+		gioco_quattro = ordine_giochi[3];
+		//ms_obj = {
+		//		"gioco" : {
+		//			"missions": {
+		//				"modalita": [],
+		//				"modalita2": []
+		//			},
+		//			"manual": {
+		//				"status": true/false,
+		//				"mission": "adbwkjb"
+		//			}
+		//		}, ...
+		//	}
+		giocouno	= switch_game(gioco_uno,ms_obj,false)
+		giocodue	= switch_game(gioco_due,ms_obj,false)
+		giocotre	= switch_game(gioco_tre,ms_obj,false)
+		giocoquattro	= switch_game(gioco_quattro,ms_obj,false)
 		console.log(giocouno, giocodue, giocotre, giocoquattro);
-	//console.log(giocouno);
-	//console.log(giocodue);
-	//console.log(giocotre);
-	//console.log(giocoquattro);
-	try{
-		giocouno.miss     = giocouno.miss    .slice(0,-5).trim()
-		giocodue.miss     = giocodue.miss    .slice(0,-5).trim() 
-		giocotre.miss     = giocotre.miss    .slice(0,-5).trim() 
-		giocoquattro.miss = giocoquattro.miss.slice(0,-5).trim()
-	}catch(e){
-		if(e.name == "TypeError" && e.message.match(/Cannot.*slice/)){ //if switch_game returns undefined
-			//debug console.log(arg1,arg2,arg3,arg4)
-			//debug console.log(gioco_uno,gioco_due,gioco_tre,gioco_quattro)
-			missions_choose(arg1, arg2, arg3, arg4, collection_name);
-			return;
+		//to fix this try catch (to fix database, so that every game has at least 1 mission of a price)
+		try{
+			giocouno.miss     = giocouno.miss    .slice(0,-5).trim()
+			giocodue.miss     = giocodue.miss    .slice(0,-5).trim() 
+			giocotre.miss     = giocotre.miss    .slice(0,-5).trim() 
+			giocoquattro.miss = giocoquattro.miss.slice(0,-5).trim()
+		}catch(e){
+			if(e.name == "TypeError" && e.message.match(/Cannot.*slice/)){ //if switch_game returns undefined
+				//debug console.log(arg1,arg2,arg3,arg4)
+				//debug console.log(gioco_uno,gioco_due,gioco_tre,gioco_quattro)
+				console.log("TypeError");
+				missions_choose(arg1, arg2, arg3, arg4, collection_name, daily);
+				return;
+			}
 		}
+		//if(giocouno.length == 0 || giocodue.length == 0 || giocotre.length == 0 || giocoquattro.length == 0)
+		//	missions_choose(arg1, arg2, arg3, arg4, collection_name);
+		
+		//messaggio_missioni = 	"@everyone"+
+		//			"\n\n"+
+		//			"-------------**| WEEKLY MISSIONS |**-------------"+
+		//			"\n\n\n"+
+		//			"*-OPEN MISSIONS-*"+
+		//			"\n\n"+
+		//			"**[** @everyone **]** "+ giocouno.miss     +" **[** "+ gioco_uno     +" **]** | **7'000** "+  shadows_icon +"\n\n"+
+		//			"**[** @everyone **]** "+ giocodue.miss     +" **[** "+ gioco_due     +" **]** | **8'000** "+  shadows_icon +"\n\n"+
+		//			"**[** @everyone **]** "+ giocotre.miss     +" **[** "+ gioco_tre     +" **]** | **9'000** "+  shadows_icon +"\n\n"+
+		//			"**[** @everyone **]** "+ giocoquattro.miss +" **[** "+ gioco_quattro +" **]** | **10'000** "+ shadows_icon +""
+		//console.log(messaggio_missioni);
+		//console.log('\n\n');
+		messaggi_missioni.push({
+				"ok": true,
+				"tag":"",
+				"type":"weekly",
+				"messaggio_embed":{
+					"title": "・MISSIONI SETTIMANALI・", //the title is always bold (**text)
+					"description": "Completa le missioni per guadagnare la moneta del server ("+ shadows_icon +")",
+					"url": "",
+					"color": 16777215,
+					"fields": [
+						{
+							"name": "・"+ gioco_uno     + ((giocouno.mode == "no_mod")?"":" | "+ giocouno.mode)     +" - "+arr_prizes[0]+" "+ shadows_icon +"",
+							"value": giocouno.miss
+						},
+						{
+							"name": "・"+ gioco_due     + ((giocodue.mode == "no_mod")?"":" | "+ giocodue.mode)     +" - "+arr_prizes[1]+" "+ shadows_icon +"",
+							"value": giocodue.miss
+						},
+						{
+							"name": "・"+ gioco_tre     + ((giocotre.mode == "no_mod")?"":" | "+ giocotre.mode)     +" - "+arr_prizes[2]+" "+ shadows_icon +"",
+							"value": giocotre.miss
+						},
+						{
+							"name": "・"+ gioco_quattro + ((giocoquattro.mode == "no_mod")?"":" | "+ giocoquattro.mode)     +" - "+arr_prizes[3]+" "+ shadows_icon +"",
+							"value": giocoquattro.miss
+						}
+					]
+				}
+			}
+		);
 	}
-	//if(giocouno.length == 0 || giocodue.length == 0 || giocotre.length == 0 || giocoquattro.length == 0)
-	//	missions_choose(arg1, arg2, arg3, arg4, collection_name);
+
+	ms_obj = (await db.collection(collection_name).doc('missions_file').get()).data();
+
+	var ggiocouno = {
+		miss: undefined,
+		mode: undefined
+	};
+	var ggiocodue = {
+		miss: undefined,
+		mode: undefined
+	};
+
+	ggiocouno	= switch_game(arg1,ms_obj,true)
+	ggiocodue	= switch_game(arg2,ms_obj,true)
+	console.log(ggiocouno, ggiocodue);
 	
-	messaggio_missioni = 	"@everyone"+
-				"\n\n"+
-				"-------------**| WEEKLY MISSIONS |**-------------"+
-				"\n\n\n"+
-				"*-OPEN MISSIONS-*"+
-				"\n\n"+
-				"**[** @everyone **]** "+ giocouno.miss     +" **[** "+ gioco_uno     +" **]** | **7'000** "+  shadows_icon +"\n\n"+
-				"**[** @everyone **]** "+ giocodue.miss     +" **[** "+ gioco_due     +" **]** | **8'000** "+  shadows_icon +"\n\n"+
-				"**[** @everyone **]** "+ giocotre.miss     +" **[** "+ gioco_tre     +" **]** | **9'000** "+  shadows_icon +"\n\n"+
-				"**[** @everyone **]** "+ giocoquattro.miss +" **[** "+ gioco_quattro +" **]** | **10'000** "+ shadows_icon +""
-	console.log(messaggio_missioni);
-	console.log('\n\n');
-	
-	messaggi_missioni = [];
 	messaggi_missioni.push({
 			"ok": true,
-			"tag":"@everyone",
-			"type":"weekly",
-			"messaggio_embed":{
-				"title": "　　　　　　　　　🔷MISSIONI SETTIMANALI🔷", //the title is always bold (**text)
-				"description": "Completa le missioni per guadagnare la moneta del server ("+ shadows_icon +")",
-				"url": "",
-				"color": 15844367,
-				"fields": [
-					{
-						"name": "🔹"+ gioco_uno     + ((giocouno.mode == "no_mod")?"":" | "+ giocouno.mode)     +" - 7'000 "+ shadows_icon +"",
-						"value": giocouno.miss
-					},
-					{
-						"name": "🔹"+ gioco_due     + ((giocodue.mode == "no_mod")?"":" | "+ giocodue.mode)     +" - 8'000 "+ shadows_icon +"",
-						"value": giocodue.miss
-					},
-					{
-						"name": "🔹"+ gioco_tre     + ((giocotre.mode == "no_mod")?"":" | "+ giocotre.mode)     +" - 9'000 "+ shadows_icon +"",
-						"value": giocotre.miss
-					},
-					{
-						"name": "🔹"+ gioco_quattro + ((giocoquattro.mode == "no_mod")?"":" | "+ giocoquattro.mode)     +" - 10'000 "+ shadows_icon +"",
-						"value": giocoquattro.miss
-					}
-				]
-			}
-		}
-	);
-	messaggi_missioni.push({
-			"ok": false,
-			"tag":"<@ID_premium/season_pass>",
+			"tag":`⠀\n<@&${id_premium_base}> <@&${id_premium_avanzato}>`,
 			"type":"daily",
 			"messaggio_embed":{
-				"title": "　　　　　　　　　🔶MISSIONI GIORNALIERE🔶", //the title is always bold (**text)
+				"title": ":large_blue_diamond:MISSIONI GIORNALIERE - Season Pass:large_orange_diamond:", //the title is always bold (**text)
 				"description": "Completa le missioni per guadagnare la moneta del server ("+ shadows_icon +")",
 				"url": "",
-				"color": 15844367,
+				"color": 15105570,
 				"fields": [
 					{
-						"name": "🔸"+ gioco_uno     + ((giocouno.mode == "no_mod")?"":" | "+ giocouno.mode)     +" - 2'000 "+ shadows_icon +"",
-						"value": giocouno.miss
+						"name": ":small_blue_diamond:"+ arg1     + ((ggiocouno.mode == "no_mod")?"":" | "+ ggiocouno.mode)     +" - 400 "+ shadows_icon +":small_orange_diamond:",
+						"value": ggiocouno.miss
 					},
 					{
-						"name": "🔸"+ gioco_uno     + ((giocodue.mode == "no_mod")?"":" | "+ giocodue.mode)     +" - 2'000 "+ shadows_icon +"",
-						"value": giocodue.miss
+						"name": ":small_blue_diamond:"+ arg2     + ((ggiocodue.mode == "no_mod")?"":" | "+ ggiocodue.mode)     +" - 400 "+ shadows_icon +":small_orange_diamond:",
+						"value": ggiocodue.miss
 					},
-					{
-						"name": "🔸"+ gioco_tre     + ((giocotre.mode == "no_mod")?"":" | "+ giocotre.mode)     +" - 2'000 "+ shadows_icon +"",
-						"value": giocotre.miss
-					}
 				]
 			}
 		}
+
 	);
-	for(i of messaggi_missioni){
-		if(!i.ok) continue;
-		ms = i.tag;
-		em = i.messaggio_embed;
-		if(ok == true){
-			client.channels.cache.get(id_missions_channel).send(
-			//client.channels.cache.get("402552272179167232").send(
-				ms,
-				{ embed: em }
-			);
-		}else{
-			console.log(
-				ms,
-				JSON.stringify({ embed: em },null,'\t')
-			);
+	
+	if(!daily) {
+		for(i of messaggi_missioni){
+			if(!i.ok) continue;
+			ms = i.tag;
+			em = i.messaggio_embed;
+			if(ok == true){
+				client.channels.cache.get(id_missions_channel).send(
+				//client.channels.cache.get("402552272179167232").send(
+					ms,
+					{ embed: em }
+				);
+			}else{
+				console.log(
+					ms,
+					JSON.stringify({ embed: em },null,'\t')
+				);
+			}
+		}
+	} else {
+		id_daily_missions = (await db.collection('missions_files').doc('missions').get()).data().daily_id;
+		for(i of messaggi_missioni){
+			if(!i.ok) continue;
+			ms = i.tag;
+			em = i.messaggio_embed;
+			if(ok == true){
+				to_edit = await client.channels.cache.get(id_missions_channel).messages.fetch(id_daily_missions);
+				to_edit.edit(
+					ms,
+					{ embed: em }
+				);
+			}else{
+				console.log(
+					ms,
+					JSON.stringify({ embed: em },null,'\t')
+				);
+			}
 		}
 	}
+	console.log("sus2")
 }
 
 function order_obj(unordered){ //taken from https://stackoverflow.com/posts/31102605/revisions before revision 6
@@ -444,7 +486,9 @@ function time2sched(time_normal){
 }
 
 //init
-const client = new Client();
+const client = new Client({
+	intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_BANS", "GUILD_EMOJIS_AND_STICKERS", "GUILD_INTEGRATIONS", "GUILD_WEBHOOKS", "GUILD_INVITES", "GUILD_VOICE_STATES" /*, altri? */]
+});
 admin.initializeApp({
 	credential: admin.credential.cert(firebase)
 });
@@ -492,8 +536,26 @@ client.on("ready", async () => {
 		)
 		fs.appendFileSync(file,"\n},\n\n");
 	}
-	console.log("Backup finished");
+	console.log("Firestore Backup finished");
 
+//	console.log("upload");
+//	pierpippo = require('./aaaaaaaa.json');
+//	console.log(pierpippo);
+//	await db.collection('missions_files').doc('missions_file').set(pierpippo);
+//	console.log("finish upload");
+//	return;
+
+	//Backup T.I.M.Warfare server
+//	try{
+//	timw_guild = await client.guilds.fetch(id_general_channel);
+//	dsbck.setStorageFolder('timw_bcks/');
+//	bck = await dsbck.create(timw_guild, {
+//					saveImage: "base64",
+//					jsonBeautify: true
+//				});
+//	console.log(bck);
+//	}catch(error){console.log(error)}
+//	return;
 
 	data_boot = new Date();
 	console.log(`Logged in as ${client.user.tag} at ${data_boot}.\n`+
@@ -559,6 +621,10 @@ client.on("ready", async () => {
 		client.channels.cache.get(id_missions_channel).send('missions_activate_now').catch(console.error);
 		console.log('sent missions_activate_now command on '+new Date());
 	});
+	scheduler.scheduleJob({second: 0, minute: 40, hour: 6, dayOfWeek: [0, new scheduler.Range(2,6)]}, ()=>{
+		client.channels.cache.get(id_missions_channel).send('daily_missions_activate_now').catch(console.error);
+		console.log('sent daily_missions_activate_now command on '+new Date());
+	});
 	scheduler.scheduleJob(daily_msg.time, ()=>{
 		if(daily_msg.enabled === "true")
 		{
@@ -581,6 +647,11 @@ client.on("ready", async () => {
 		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.epiphany));
 		console.log('sent merry epiphany timw on '+new Date());
 	});
+	//pasqua //TODO
+	//scheduler.scheduleJob('0 0 9 6 1 *', ()=>{
+	//////	client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.easter));
+	//////	console.log('sent happy easter timw on '+new Date());
+	//});
 
 	//timw
 	scheduler.scheduleJob('0 0 9 27 3 *', ()=>{
@@ -622,6 +693,11 @@ client.on("ready", async () => {
 		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.creep));
 		console.log('sent best wishes creepraptor on '+new Date());
 	});
+	//wolf
+	scheduler.scheduleJob('0 30 8 24 08 *', async ()=>{
+		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.wolf));
+		console.log('sent best wishes wolf on '+new Date());
+	});
 	//cb (CB7356)
 	scheduler.scheduleJob('0 30 8 18 5 *', async ()=>{
 		(await client.users.fetch(cb_id)).send(eval(bdays_msgs.cb));
@@ -656,7 +732,7 @@ client.on('message', async message => {try{
 //		console.log("sent best wishes anniversary xevery ("+adrecruit+" years) on "+new Date());
 //		client.channels.cache.get(id_general_channel).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
 //	}
-	console.log("'message' event received");
+	//console.log("'message' event received");
 	if(message.content.startsWith(p+'scam')){
 		if(check_perms(message,'a')){
 			scam_msg = await message.channel.messages.fetch(message.content.split(' ')[1]);
@@ -692,7 +768,8 @@ client.on('message', async message => {try{
 		);
 	}
 	if(message.content.startsWith(p+'edit-mission ')){
-		//syntax: /edit-mission [game] [new mission] OR /edit-mission [game] s/ [pattern to subtitute] [subtitute with]
+		// NO //syntax: /edit-mission [game] [new mission] OR /edit-mission [game] s/ [pattern to subtitute] [subtitute with]
+		//syntax: /edit-mission [pattern to subtitute] [subtitute with]
 		if(check_perms(message,'a')){
 			m = shlex.split(message.content);
 			message.delete().then(msg => {var d = Date(); console.log(`Deleted /edit-mission message from ${msg.author.username} at ${d}`)}).catch(console.error);
@@ -716,7 +793,7 @@ client.on('message', async message => {try{
 	if(message.content.startsWith(p+'move')){
 		cur_msg = message;
 		message.delete().then(msg => {var d = Date(); console.log(`Deleted /move message from ${msg.author.username} at ${d}`)}).catch(console.error);
-		if(check_perms(cur_msg,'a')){
+		if(check_perms(cur_msg,'a') || check_perms(cur_msg,'k')){
 			m_split = cur_msg.content.split(' ');
 			cur_guild = cur_msg.guild;
 			if(cur_msg.mentions.members.first()){
@@ -1070,7 +1147,7 @@ client.on('message', async message => {try{
 								+"*- Deletes the message(s) with [id]*\n"
 								+"`/move [@mention|id]`"
 								+"*- Moves 8 times the mentioned user (or the user with the specified id) in and out of the afk channel*\n"
-								+"`/edit-mission [game] [new mission]` OR `/edit-mission [game] s/ [pattern to subtitute] [subtitute with]`\n"
+								+"`/edit-mission [pattern to subtitute] [subtitute with]`\n"
 								+"*- Change current mission for `game`*\n"
 								+"`/cit` OR `/citazione` OR `/quote`\n"
 								+"*- Sends a quote of the T.I.M.Warfare Clan.*\n"
@@ -1259,6 +1336,7 @@ client.on('message', async message => {try{
 			message.channel.send("Please type a valid poll. Use `/help` for the list of commands and syntaxes.");
 			//message.channel.send("Please type a valid poll.\n**Syntax**: \`\`\`/poll poll message;element1,element2,...\`\`\`");
 		} else {
+			console.log('reacting...');
 			poll_entries = uno.split(",");
 			var i;
 			for(i = 0; i < poll_entries.length; i++ ) {
@@ -1273,6 +1351,7 @@ client.on('message', async message => {try{
 				}
 			}
 		}
+		console.log('finished reacting');
 	}
 	if(message.content.startsWith(p+'poll Prossimi giochi per le missioni (le missioni saranno sui 4 giochi più votati);')) {
 		message.delete().then(msg => {var d = Date(); console.log(`Deleted message poll missions from ${msg.author.username} at ${d}`)}).catch(console.error);
@@ -1281,11 +1360,18 @@ client.on('message', async message => {try{
 		db.collection('missions_files').doc('poll').set({id: message.id}).catch(console.error);
 		console.log("scritto poll: "+message.id);
 	}
-	if(message.author.id == bot_id && message.content == "@everyone" &&
-			  message.embeds[0].title == '🔷MISSIONI SETTIMANALI🔷' &&
-			  message.embeds[0].color == 15844367 &&
-			  message.embeds[0].description == 'Completa le missioni per guadagnare la moneta del server (<:shadowsdesign:893222216966225960>)') {
-		db.collection('missions_files').doc('missions').set({id: message.id});
+	if(message.author.id == bot_id && message.embeds.length > 0 &&
+			  message.embeds[0].title == '・MISSIONI SETTIMANALI・' &&
+			  message.embeds[0].color == 16777215 &&
+			  message.embeds[0].description == 'Completa le missioni per guadagnare la moneta del server ('+shadows_icon+')') {
+		db.collection('missions_files').doc('missions').update({id: message.id});
+		console.log("scritto_missioni: "+message.id);
+	}
+	if(message.author.id == bot_id && message.embeds.length > 0 &&
+			  message.embeds[0].title == ':large_blue_diamond:MISSIONI GIORNALIERE - Season Pass:large_orange_diamond:' &&
+			  message.embeds[0].color == 15105570 &&
+			  message.embeds[0].description == 'Completa le missioni per guadagnare la moneta del server ('+shadows_icon+')') {
+		db.collection('missions_files').doc('missions').update({daily_id: message.id});
 		console.log("scritto_missioni: "+message.id);
 	}
 	if(message.content == 'poll_missions_send' && (message.author.id === bot_id || message.author.id === koray_id)){
@@ -1301,7 +1387,7 @@ client.on('message', async message => {try{
 		message.delete().then(msg => {var d = Date(); console.log(`Deleted message from ${msg.author.username} at ${d}`)}).catch(console.error);
 	}
 	//retrieve giochi missioni
-	if(message.content === 'missions_activate_now' && (message.author.id === bot_id || message.author.id === koray_id) && send_missions == true) {
+	if((message.content === 'missions_activate_now' || message.content === 'daily_missions_activate_now') && (message.author.id === bot_id || message.author.id === koray_id) && send_missions == true) {
 		if(ok == true) send_missions = false;
 		//missions_file = order_obj((await db.collection('missions_files').doc('missions_file').get()).data());
 		missions_collection_name = 'missions_files';
@@ -1329,38 +1415,42 @@ client.on('message', async message => {try{
 		array_votes.sort();
 		array_votes.reverse();
 		console.log(array_votes);
-		missions_choose(array_votes[0].substr(4), array_votes[1].substr(4), array_votes[2].substr(4), array_votes[3].substr(4), missions_collection_name);
 		console.log(array_votes[0].substr(4)+ "_" + array_votes[1].substr(4)+ "_" + array_votes[2].substr(4)+ "_" + array_votes[3].substr(4));
-		//console.log(`\na\n${array_votes}\na\n`);
-		// }, 100)
-		/* }catch(error){
-			console.error(error);
-		} */
-
-		// try{
-			
-		/* }catch(error){
-			console.error(error);
-		} */
-		if(ok == true){
-			setTimeout(()=>{ //delete last poll
-				message.channel.messages.fetch(id_poll).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_poll (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
-			}, 2000)
-			id_missions = (await db.collection('missions_files').doc('missions').get()).data().id;
-			setTimeout(()=>{ //delete last missions message
-				message.channel.messages.fetch(id_missions).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_missions (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
-			}, 3000)
-			setTimeout(()=>{ //poll
-				client.channels.cache.get(id_missions_channel).send('poll_missions_send');
-				console.log(`sent poll_missions_send at ${Date()}`);
-			}, 5000)
+		if(message.content === 'daily_missions_activate_now') {
+			missions_choose(array_votes[0].substr(4), array_votes[1].substr(4), array_votes[2].substr(4), array_votes[3].substr(4), missions_collection_name, true);
 			setTimeout(async ()=>{ //avviso in #general
-				client.channels.cache.get(id_general_channel).send("@everyone\n\n**NUOVE Missioni Settimanali disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.");
-				console.log(`sent alert_missions at ${Date()}`);
-				(await client.users.fetch(koray_id)).send("check <#437961671018020864>");
+				client.channels.cache.get(id_general_channel).send("@everyone\n\n**NUOVE Missioni Giornaliere disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.");
+				console.log(`sent alert_daily_missions at ${Date()}`);
+				(await client.users.fetch(koray_id)).send("check <#437961671018020864> daily");
 				send_missions = true;
-			}, 10000)
+			}, 2000)
+		} else if(message.content === 'missions_activate_now') {
+			missions_choose(array_votes[0].substr(4), array_votes[1].substr(4), array_votes[2].substr(4), array_votes[3].substr(4), missions_collection_name, false);
+			if(ok == true){
+				setTimeout(()=>{ //delete last poll
+					message.channel.messages.fetch(id_poll).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_poll (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
+				}, 2000)
+				id_missions = (await db.collection('missions_files').doc('missions').get()).data().id;
+				setTimeout(()=>{ //delete last missions message
+					message.channel.messages.fetch(id_missions).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_missions (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
+				}, 3000)
+				id_daily_missions = (await db.collection('missions_files').doc('missions').get()).data().daily_id;
+				setTimeout(()=>{ //delete last missions message
+					message.channel.messages.fetch(id_daily_missions).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_daily_missions (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
+				}, 3000)
+				setTimeout(()=>{ //poll
+					client.channels.cache.get(id_missions_channel).send('poll_missions_send');
+					console.log(`sent poll_missions_send at ${Date()}`);
+				}, 5000)
+				setTimeout(async ()=>{ //avviso in #general
+					client.channels.cache.get(id_general_channel).send("@everyone\n\n**NUOVE Missioni Settimanali disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.");
+					console.log(`sent alert_missions at ${Date()}`);
+					(await client.users.fetch(koray_id)).send("check <#437961671018020864>");
+					send_missions = true;
+				}, 10000)
+			}
 		}
+		console.log("sus")
 	}
 	//for(int ){
 
