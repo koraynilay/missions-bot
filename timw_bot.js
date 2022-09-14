@@ -19,6 +19,7 @@ const request_fetch = require('node-fetch'); //since https://www.npmjs.com/packa
 var ok = true;
 //ok = false;
 console.log("ok: "+ok);
+if(ok == false) console.log("\n!!\nok is false\n!!");
 
 var users_plates;
 var crate;
@@ -192,39 +193,22 @@ function rb(obj){
 }
 
 function switch_game(gioco_arg, ms_obj, daily) {
-	/* gioco_arg = {
-	 * 		"mis":"missione"
-	 * 		"mod":"modalità"
-	 * 	}
-	 */
+	/* gioco_arg = same as individual mission, see from line 281 */
 	console.log("switch ",gioco_arg);
 	cur = ms_obj[gioco_arg];
-	gioco_arg = {
-		miss: undefined,
-		mode: undefined
-	};
 	if(cur.manual.status) {
-		gioco_arg.miss = cur.manual.mission;
-		gioco_arg.mode = cur.manual.mode;
+		gioco_arg = cur.manual;
 	} else if(daily) {
-		mss =  cur.daily;
-		k = rb(cur.daily);
-		gioco_arg.miss = rn(cur.daily[k]);
-		console.log(gioco_arg.miss);
-		gioco_arg.mode = k;
+		gioco_arg = rn(cur.daily);
 	} else {
-		mss =  cur.missions;
-		k = rb(cur.missions);
-		gioco_arg.miss = rn(cur.missions[k]);
-		console.log(gioco_arg.miss);
-		gioco_arg.mode = k;
-		//mss[k][rn] = "NO:" + gioco_arg;
+		gioco_arg = rn(cur.weekly);
 	}
 	console.log("switch end ",gioco_arg);
 	return gioco_arg;
 }
 
 async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, collection_name, daily) {
+	console.log("missions_choose start");
 	//ms_obj = order_obj((await db.collection(collection_name).doc('missions_file').get()).data());
 	ms_obj =           (await db.collection(collection_name).doc('missions_file').get()).data();
 	console.log(ms_obj);
@@ -238,22 +222,6 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 
 	if(!daily) {
 		// "price" means "reward" here
-		var giocouno = {
-			miss: undefined,
-			mode: undefined
-		};
-		var giocodue = {
-			miss: undefined,
-			mode: undefined
-		};
-		var giocotre = {
-			miss: undefined,
-			mode: undefined
-		};
-		var giocoquattro = {
-			miss: undefined,
-			mode: undefined
-		};
 
 		var ordine_giochi = [gioco_uno, gioco_due, gioco_tre, gioco_quattro];
 		console.log("normale:"); console.log(ordine_giochi);
@@ -271,17 +239,21 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 		//TODO: ms_obj[v].filter(...) -> una missione a caso che sia diversa da quella dell'ultima settimana
 		for(const [i,v] of ordine_giochi.entries()){ //i = counter, v = value
 			console.log("a:"+v+":"); console.log(ms_obj[v]);
-			for(let k in ms_obj[v].missions){
-				if(ms_obj[v].missions[k].length == 0) continue;
-				//mss = ms_obj[v].missions;
-				ms_obj[v].missions[k] = ms_obj[v].missions[k].filter(
+			if(ms_obj[v].weekly.length == 0) continue;
+			ms_obj[v].weekly = ms_obj[v].weekly.filter(
 					e => //e = element of array of game v
-					parseInt(e.slice(-5)) == arr_prizes[i] //this returns only the elements of the right price
-				).filter(
-					e=>
-					e.startsWith("NO:") == false
-				);
-			}
+					e.reward == arr_prizes[i] //this returns only the elements of the right price
+			);
+
+			//for(let k in ms_obj[v].weekly){
+			//	//mss = ms_obj[v].weekly;
+			//	ms_obj[v].weekly[k] = ms_obj[v].weekly[k].filter(
+			//		parseInt(e.slice(-5)) == arr_prizes[i] //this returns only the elements of the right price
+			//	).filter(
+			//		e=>
+			//		e.startsWith("NO:") == false
+			//	);
+			//}
 			console.log("b:"+arr_prizes[i]+"+:"+v+":"); console.log(ms_obj[v]);
 		}
 		//return 
@@ -291,38 +263,47 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 		gioco_tre     = ordine_giochi[2];
 		gioco_quattro = ordine_giochi[3];
 		//ms_obj = {
-		//		"gioco" : {
-		//			"missions": {
-		//				"modalita": [],
-		//				"modalita2": []
-		//			},
+		//		"nome gioco" : {
+		//			"weekly": [
+		//				{
+		//					"mission": "...",
+		//					"mode": "...",
+		//					"reward": "..."
+		//				}, ...
+		//			],
+		//			"daily": [
+		//				{
+		//					"mission": "...",
+		//					"mode": "...",
+		//				}, ...
+		//			],
 		//			"manual": {
 		//				"status": true/false,
 		//				"mission": "adbwkjb"
 		//			}
 		//		}, ...
 		//	}
-		giocouno	= switch_game(gioco_uno,ms_obj,false)
-		giocodue	= switch_game(gioco_due,ms_obj,false)
-		giocotre	= switch_game(gioco_tre,ms_obj,false)
-		giocoquattro	= switch_game(gioco_quattro,ms_obj,false)
-		console.log(giocouno, giocodue, giocotre, giocoquattro);
+		const missione_uno	= switch_game(gioco_uno,ms_obj,false)
+		const missione_due	= switch_game(gioco_due,ms_obj,false)
+		const missione_tre	= switch_game(gioco_tre,ms_obj,false)
+		const missione_quattro	= switch_game(gioco_quattro,ms_obj,false)
+		console.log(missione_uno, missione_due, missione_tre, missione_quattro);
 		//to fix this try catch (to fix database, so that every game has at least 1 mission of a price)
-		try{
-			giocouno.miss     = giocouno.miss    .slice(0,-5).trim()
-			giocodue.miss     = giocodue.miss    .slice(0,-5).trim() 
-			giocotre.miss     = giocotre.miss    .slice(0,-5).trim() 
-			giocoquattro.miss = giocoquattro.miss.slice(0,-5).trim()
-		}catch(e){
-			if(e.name == "TypeError" && e.message.match(/Cannot.*slice/)){ //if switch_game returns undefined
-				//debug console.log(arg1,arg2,arg3,arg4)
-				//debug console.log(gioco_uno,gioco_due,gioco_tre,gioco_quattro)
-				console.log("TypeError");
-				missions_choose(arg1, arg2, arg3, arg4, collection_name, daily);
-				return;
-			}
-		}
-		//if(giocouno.length == 0 || giocodue.length == 0 || giocotre.length == 0 || giocoquattro.length == 0)
+		//try{
+		//	missione_uno.mission     = missione_uno.mission    .slice(0,-5).trim()
+		//	missione_due.mission     = missione_due.mission    .slice(0,-5).trim() 
+		//	missione_tre.mission     = missione_tre.mission    .slice(0,-5).trim() 
+		//	missione_quattro.mission = missione_quattro.mission.slice(0,-5).trim()
+		//}catch(e){
+		//	if(e.name == "TypeError" && e.message.match(/Cannot.*slice/)){ //if switch_game returns undefined
+		//		//debug console.log(arg1,arg2,arg3,arg4)
+		//		//debug console.log(gioco_uno,gioco_due,gioco_tre,gioco_quattro)
+		//		console.log("TypeError");
+		//		missions_choose(arg1, arg2, arg3, arg4, collection_name, daily);
+		//		return;
+		//	}
+		//}
+		//if(missione_uno.length == 0 || missione_due.length == 0 || missione_tre.length == 0 || missione_quattro.length == 0)
 		//	missions_choose(arg1, arg2, arg3, arg4, collection_name);
 		
 		//messaggio_missioni = 	"@everyone"+
@@ -331,15 +312,15 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 		//			"\n\n\n"+
 		//			"*-OPEN MISSIONS-*"+
 		//			"\n\n"+
-		//			"**[** @everyone **]** "+ giocouno.miss     +" **[** "+ gioco_uno     +" **]** | **7'000** "+  shadows_icon +"\n\n"+
-		//			"**[** @everyone **]** "+ giocodue.miss     +" **[** "+ gioco_due     +" **]** | **8'000** "+  shadows_icon +"\n\n"+
-		//			"**[** @everyone **]** "+ giocotre.miss     +" **[** "+ gioco_tre     +" **]** | **9'000** "+  shadows_icon +"\n\n"+
-		//			"**[** @everyone **]** "+ giocoquattro.miss +" **[** "+ gioco_quattro +" **]** | **10'000** "+ shadows_icon +""
+		//			"**[** @everyone **]** "+ missione_uno.mission     +" **[** "+ gioco_uno     +" **]** | **7'000** "+  shadows_icon +"\n\n"+
+		//			"**[** @everyone **]** "+ missione_due.mission     +" **[** "+ gioco_due     +" **]** | **8'000** "+  shadows_icon +"\n\n"+
+		//			"**[** @everyone **]** "+ missione_tre.mission     +" **[** "+ gioco_tre     +" **]** | **9'000** "+  shadows_icon +"\n\n"+
+		//			"**[** @everyone **]** "+ missione_quattro.mission +" **[** "+ gioco_quattro +" **]** | **10'000** "+ shadows_icon +""
 		//console.log(messaggio_missioni);
 		//console.log('\n\n');
 		messaggi_missioni.push({
 				"ok": true,
-				"tag":"",
+				"tag":"@everyone",
 				"type":"weekly",
 				"messaggio_embed":{
 					"title": "・MISSIONI SETTIMANALI・", //the title is always bold (**text)
@@ -348,20 +329,20 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 					"color": 16777215,
 					"fields": [
 						{
-							"name": "・"+ gioco_uno     + ((giocouno.mode == "no_mod")?"":" | "+ giocouno.mode)     +" - "+arr_prizes[0]+" "+ shadows_icon +"",
-							"value": giocouno.miss
+							"name": "・"+ gioco_uno     + ((missione_uno.mode == "no_mod")?"":" | "+ missione_uno.mode)     +" - "+ missione_uno.reward +" "+ shadows_icon +"",
+							"value": missione_uno.mission
 						},
 						{
-							"name": "・"+ gioco_due     + ((giocodue.mode == "no_mod")?"":" | "+ giocodue.mode)     +" - "+arr_prizes[1]+" "+ shadows_icon +"",
-							"value": giocodue.miss
+							"name": "・"+ gioco_due     + ((missione_due.mode == "no_mod")?"":" | "+ missione_due.mode)     +" - "+ missione_due.reward +" "+ shadows_icon +"",
+							"value": missione_due.mission
 						},
 						{
-							"name": "・"+ gioco_tre     + ((giocotre.mode == "no_mod")?"":" | "+ giocotre.mode)     +" - "+arr_prizes[2]+" "+ shadows_icon +"",
-							"value": giocotre.miss
+							"name": "・"+ gioco_tre     + ((missione_tre.mode == "no_mod")?"":" | "+ missione_tre.mode)     +" - "+ missione_tre.reward +" "+ shadows_icon +"",
+							"value": missione_tre.mission
 						},
 						{
-							"name": "・"+ gioco_quattro + ((giocoquattro.mode == "no_mod")?"":" | "+ giocoquattro.mode)     +" - "+arr_prizes[3]+" "+ shadows_icon +"",
-							"value": giocoquattro.miss
+							"name": "・"+ gioco_quattro + ((missione_quattro.mode == "no_mod")?"":" | "+ missione_quattro.mode)     +" - "+ missione_quattro.reward +" "+ shadows_icon +"",
+							"value": missione_quattro.mission
 						}
 					]
 				}
@@ -371,18 +352,11 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 
 	ms_obj = (await db.collection(collection_name).doc('missions_file').get()).data();
 
-	var ggiocouno = {
-		miss: undefined,
-		mode: undefined
-	};
-	var ggiocodue = {
-		miss: undefined,
-		mode: undefined
-	};
+	const daily_reward = "400";
 
-	ggiocouno	= switch_game(arg1,ms_obj,true)
-	ggiocodue	= switch_game(arg2,ms_obj,true)
-	console.log(ggiocouno, ggiocodue);
+	const daily_missione_uno	= switch_game(arg1,ms_obj,true)
+	const daily_missione_due	= switch_game(arg2,ms_obj,true)
+	console.log(daily_missione_uno, daily_missione_due);
 	
 	messaggi_missioni.push({
 			"ok": true,
@@ -395,12 +369,12 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 				"color": 15105570,
 				"fields": [
 					{
-						"name": ":small_blue_diamond:"+ arg1     + ((ggiocouno.mode == "no_mod")?"":" | "+ ggiocouno.mode)     +" - 400 "+ shadows_icon +":small_orange_diamond:",
-						"value": ggiocouno.miss
+						"name": ":small_blue_diamond:"+ arg1     + ((daily_missione_uno.mode == "no_mod")?"":" | "+ daily_missione_uno.mode)     +" - "+ daily_reward +" "+ shadows_icon +":small_orange_diamond:",
+						"value": daily_missione_uno.mission
 					},
 					{
-						"name": ":small_blue_diamond:"+ arg2     + ((ggiocodue.mode == "no_mod")?"":" | "+ ggiocodue.mode)     +" - 400 "+ shadows_icon +":small_orange_diamond:",
-						"value": ggiocodue.miss
+						"name": ":small_blue_diamond:"+ arg2     + ((daily_missione_due.mode == "no_mod")?"":" | "+ daily_missione_due.mode)     +" - "+ daily_reward +" "+ shadows_icon +":small_orange_diamond:",
+						"value": daily_missione_due.mission
 					},
 				]
 			}
@@ -431,20 +405,18 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 			ms = i.tag;
 			em = i.messaggio_embed;
 			if(ok == true){
-				to_edit = await client.channels.cache.get(id_missions_channel).messages.fetch(id_daily_missions);
+				to_edit = (await (await client.channels.fetch(id_missions_channel)).messages.fetch(id_daily_missions));
 				to_edit.edit(
-					ms,
-					{ embed: em }
+					re(ms,[em])
 				);
 			}else{
 				console.log(
-					ms,
-					JSON.stringify({ embed: em },null,'\t')
+					JSON.stringify(re(ms,[em]),null,'\t')
 				);
 			}
 		}
 	}
-	console.log("sus2")
+	console.log("missions_choose finish");
 }
 
 function order_obj(unordered){ //taken from https://stackoverflow.com/posts/31102605/revisions before revision 6
