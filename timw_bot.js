@@ -6,7 +6,7 @@ fn = endec.decode(process.env.fc);
 
 //modules
 const fs = require('fs');
-const {Client, RichEmbed} = require('discord.js');
+const {Client, ChannelType, GatewayIntentBits} = require('discord.js');
 const scheduler = require('node-schedule');
 const admin = require('firebase-admin');
 const firebase = require(fn);
@@ -52,8 +52,11 @@ const role_bot = '255996099851059200';
 const id_premium_base = '1005805415495381063'
 const id_premium_avanzato = '1005808061694365796'
 
-const id_missions_channel = '437961671018020864'; //'686564768915521566';
-const id_general_channel = '686564781913800767'; //'218294724979720192';
+const id_missions_channel = '437961671018020864';
+//const id_missions_channel = '686564768915521566'; //di prova
+const id_general_channel = '218294724979720192';
+//const id_general_channel = '686564781913800767'; //di prova
+const id_poll_channel = '437961671018020864';
 const id_covid_channel = '903310173429461062';
 var send_missions = true;
 
@@ -411,15 +414,13 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 			ms = i.tag;
 			em = i.messaggio_embed;
 			if(ok == true){
-				client.channels.cache.get(id_missions_channel).send(
-				//client.channels.cache.get("402552272179167232").send(
-					ms,
-					{ embed: em }
+				(await client.channels.fetch(id_missions_channel)).send(
+				//(await client.channels.fetch("402552272179167232")).send(
+					re(ms, [em])
 				);
 			}else{
 				console.log(
-					ms,
-					JSON.stringify({ embed: em },null,'\t')
+					JSON.stringify(re(ms,[em]),null,'\t')
 				);
 			}
 		}
@@ -466,11 +467,11 @@ function order_obj(unordered){ //taken from https://stackoverflow.com/posts/3110
 function check_perms(msg_to_check,mode){
 	switch(mode){
 		case 'a': //guild and dm
-			return (msg_to_check.guild && (msg_to_check.member.roles.cache.get(role_econ_moderator) || msg_to_check.member.roles.cache.get(role_capo_clan) || msg_to_check.member.roles.cache.get(role_admin) || msg_to_check.member.roles.cache.get(role_bot) || msg_to_check.member.roles.cache.get(role_moderator))) || (msg_to_check.channel.type == 'dm' && (msg_to_check.author.id == koray_id || msg_to_check.author.id == triccotricco_id || msg_to_check.author.id == lux_id || msg_to_check.author.id == xevery_id))
+			return (msg_to_check.guild && (msg_to_check.member.roles.cache.get(role_econ_moderator) || msg_to_check.member.roles.cache.get(role_capo_clan) || msg_to_check.member.roles.cache.get(role_admin) || msg_to_check.member.roles.cache.get(role_bot) || msg_to_check.member.roles.cache.get(role_moderator))) || (msg_to_check.channel.type == ChannelType.DM && (msg_to_check.author.id == koray_id || msg_to_check.author.id == triccotricco_id || msg_to_check.author.id == lux_id || msg_to_check.author.id == xevery_id))
 		case 'g': //only guild
 			return (msg_to_check.guild && (msg_to_check.member.roles.cache.get(role_econ_moderator) || msg_to_check.member.roles.cache.get(role_capo_clan) || msg_to_check.member.roles.cache.get(role_admin) || msg_to_check.member.roles.cache.get(role_bot) || msg_to_check.member.roles.cache.get(role_moderator)))
 		case 'd': //only dm
-			return (msg_to_check.channel.type == 'dm' && (msg_to_check.author.id == koray_id || msg_to_check.author.id == triccotricco_id || msg_to_check.author.id == lux_id || msg_to_check.author.id == xevery_id))
+			return (msg_to_check.channel.type == ChannelType.DM && (msg_to_check.author.id == koray_id || msg_to_check.author.id == triccotricco_id || msg_to_check.author.id == lux_id || msg_to_check.author.id == xevery_id))
 		case 'k':
 			return (msg_to_check.author.id == koray_id)
 	}
@@ -487,7 +488,22 @@ function time2sched(time_normal){
 
 //init
 const client = new Client({
-	intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_BANS", "GUILD_EMOJIS_AND_STICKERS", "GUILD_INTEGRATIONS", "GUILD_WEBHOOKS", "GUILD_INVITES", "GUILD_VOICE_STATES" /*, altri? */]
+	//intents: ["GUILDS", "GUILD_MESSAGES", /*"GUILD_INVITES",*/ "MESSAGE_CONTENT", "]
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.GuildMessageReactions,
+		GatewayIntentBits.DirectMessages,
+		GatewayIntentBits.DirectMessageReactions,
+		GatewayIntentBits.MessageContent
+		/*
+		"GUILDS",
+		"GUILD_MESSAGES",
+		"GUILD_MESSAGE_REACTIONS",
+		"DIRECT_MESSAGES",
+		"DIRECT_MESSAGE_REACTIONS"
+		*/
+	]
 });
 admin.initializeApp({
 	credential: admin.credential.cert(firebase)
@@ -561,6 +577,7 @@ client.on("ready", async () => {
 	console.log(`Logged in as ${client.user.tag} at ${data_boot}.\n`+
 		    `general: ${(id_general_channel == '218294724979720192') ? id_general_channel : id_general_channel + "\n\nWARNING!! Not TIMW's one\n\n"}\n`+
 		    `missions: ${(id_missions_channel == '437961671018020864') ? id_missions_channel : id_missions_channel + "\n\nWARNING!! Not TIMW's one\n\n"}\n`+
+		    `poll: ${(id_poll_channel == '437961671018020864') ? id_poll_channel : id_poll_channel + "\n\nWARNING!! Not TIMW's one\n\n"}\n`+
 		    `covid: ${(id_covid_channel == '778566372333453312') ? id_covid_channel : id_covid_channel + "\n\nWARNING!! Not TIMW's one\n\n"}\n`+
 		    `prefix: ${p}\n`+
 		    `shadows_icon: ${shadows_icon}`
@@ -613,89 +630,89 @@ client.on("ready", async () => {
 				`morti: \`${deaths}\` (${newdeaths > 0?"+":"-"}\`${Math.abs(newdeaths)}\`)\n`+
 				`terapia intensiva: \`${terint}\` (${newterint > 0?"+":"-"}\`${Math.abs(newterint)}\`)`;
 		console.log(msg_covid);
-		client.channels.cache.get(id_covid_channel).send(msg_covid);
+		(await client.channels.fetch(id_covid_channel)).send(msg_covid);
 	});
 
 
-	scheduler.scheduleJob({second: 0, minute: 40, hour: 6, dayOfWeek: 1}, ()=>{
-		client.channels.cache.get(id_missions_channel).send('missions_activate_now').catch(console.error);
+	scheduler.scheduleJob({second: 0, minute: 40, hour: 6, dayOfWeek: 1}, async ()=>{
+		(await client.channels.fetch(id_missions_channel)).send('missions_activate_now').catch(console.error);
 		console.log('sent missions_activate_now command on '+new Date());
 	});
-	scheduler.scheduleJob({second: 0, minute: 40, hour: 6, dayOfWeek: [0, new scheduler.Range(2,6)]}, ()=>{
-		client.channels.cache.get(id_missions_channel).send('daily_missions_activate_now').catch(console.error);
+	scheduler.scheduleJob({second: 0, minute: 40, hour: 6, dayOfWeek: [0, new scheduler.Range(2,6)]}, async ()=>{
+		(await client.channels.fetch(id_missions_channel)).send('daily_missions_activate_now').catch(console.error);
 		console.log('sent daily_missions_activate_now command on '+new Date());
 	});
-	scheduler.scheduleJob(daily_msg.time, ()=>{
+	scheduler.scheduleJob(daily_msg.time, async ()=>{
 		if(daily_msg.enabled === "true")
 		{
-			client.channels.cache.get(daily_msg.channel.id).send(daily_msg.messaggio.replace(/\\n/g, '\n'));
+			(await client.channels.fetch(daily_msg.channel.id)).send(daily_msg.messaggio.replace(/\\n/g, '\n'));
 			console.log(`sent daily_msg.`);
 		}
 	});
 	//natale
-	scheduler.scheduleJob('0 0 9 25 12 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.xmas));
+	scheduler.scheduleJob('0 0 9 25 12 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.xmas));
 		console.log('sent merry xmas timw on '+new Date());
 	});
 	//buon anno
-	scheduler.scheduleJob('0 0 0 1 1 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.newyear));
+	scheduler.scheduleJob('0 0 0 1 1 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.newyear));
 		console.log('sent happy new year timw on '+new Date());
 	});
 	//epifania
-	scheduler.scheduleJob('0 0 9 6 1 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.epiphany));
+	scheduler.scheduleJob('0 0 9 6 1 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.epiphany));
 		console.log('sent merry epiphany timw on '+new Date());
 	});
 	//pasqua //TODO
-	//scheduler.scheduleJob('0 0 9 6 1 *', ()=>{
-	//////	client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.easter));
+	//scheduler.scheduleJob('0 0 9 6 1 *', async ()=>{
+	//////	(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.easter));
 	//////	console.log('sent happy easter timw on '+new Date());
 	//});
 
 	//timw
-	scheduler.scheduleJob('0 0 9 27 3 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.timw));
+	scheduler.scheduleJob('0 0 9 27 3 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.timw));
 		console.log('sent best wishes timw on '+new Date());
 	});
 	//koray
-	scheduler.scheduleJob('0 30 8 17 5 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.koray));
+	scheduler.scheduleJob('0 30 8 17 5 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.koray));
 		console.log('sent best wishes koray on '+new Date());
 	});
 	//triccotricco
-	scheduler.scheduleJob('0 30 8 6 5 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.triccotricco));
+	scheduler.scheduleJob('0 30 8 6 5 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.triccotricco));
 		console.log('sent best wishes triccotricco on '+new Date());
 	});
 	//lux
-	scheduler.scheduleJob('0 30 8 16 11 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.lux));
+	scheduler.scheduleJob('0 30 8 16 11 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.lux));
 		console.log('sent best wishes lux on '+new Date());
 	});
 	//xevery
-	scheduler.scheduleJob('0 30 8 15 1 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.xevery));
+	scheduler.scheduleJob('0 30 8 15 1 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.xevery));
 		console.log('sent best wishes xevery on '+new Date());
 	});
 	//gu
-	scheduler.scheduleJob('0 30 8 14 11 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.gu));
+	scheduler.scheduleJob('0 30 8 14 11 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.gu));
 		console.log('sent best wishes gu on '+new Date());
 	});
 	//sowl
-	scheduler.scheduleJob('0 30 8 7 6 *', ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.sowl));
+	scheduler.scheduleJob('0 30 8 7 6 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.sowl));
 		console.log('sent best wishes sowl on '+new Date());
 	});
 	//creepraptor (creep)
 	scheduler.scheduleJob('0 30 8 26 10 *', async ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.creep));
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.creep));
 		console.log('sent best wishes creepraptor on '+new Date());
 	});
 	//wolf
 	scheduler.scheduleJob('0 30 8 24 08 *', async ()=>{
-		client.channels.cache.get(id_general_channel).send(eval(bdays_msgs.wolf));
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.wolf));
 		console.log('sent best wishes wolf on '+new Date());
 	});
 	//cb (CB7356)
@@ -704,33 +721,33 @@ client.on("ready", async () => {
 		console.log('sent best wishes cb (in dm) on '+new Date());
 	});
 
-	scheduler.scheduleJob('0 0 10 3 5 *', ()=>{
+	scheduler.scheduleJob('0 0 10 3 5 *', async ()=>{
 		var adrecruit = new Date().getFullYear() - users_plates[koray_id].drecruit.match(/(?![0-9]{2}\/[0-9]{2}\/)[0-9]{4}/g).toString();
 		console.log("sent best wishes anniversary koray ("+adrecruit+" years) on "+new Date());
-		client.channels.cache.get(id_general_channel).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+koray_id+">! :birthday:");
+		(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+koray_id+">! :birthday:");
 	});
-	scheduler.scheduleJob('0 0 10 4 5 *', ()=>{
+	scheduler.scheduleJob('0 0 10 4 5 *', async ()=>{
 		var adrecruit = new Date().getFullYear() - users_plates[lux_id].drecruit.match(/(?![0-9]{2}\/[0-9]{2}\/)[0-9]{4}/g).toString();
 		console.log("sent best wishes anniversary lux ("+adrecruit+" years) on "+new Date());
-		client.channels.cache.get(id_general_channel).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+lux_id+">! :birthday:");
+		(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+lux_id+">! :birthday:");
 	});
-	scheduler.scheduleJob('0 0 10 27 3 *', ()=>{
+	scheduler.scheduleJob('0 0 10 27 3 *', async ()=>{
 		var adrecruit = new Date().getFullYear() - users_plates[triccotricco_id].drecruit.match(/(?![0-9]{2}\/[0-9]{2}\/)[0-9]{4}/g).toString();
 		console.log("sent best wishes anniversary triccotricco ("+adrecruit+" years) on "+new Date());
-		client.channels.cache.get(id_general_channel).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+triccotricco_id+">! :birthday:");
+		(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+triccotricco_id+">! :birthday:");
 	});
-	scheduler.scheduleJob('0 0 10 25 4 *', ()=>{
+	scheduler.scheduleJob('0 0 10 25 4 *', async ()=>{
 		var adrecruit = new Date().getFullYear() - users_plates['426052055589978112'].drecruit.match(/(?![0-9]{2}\/[0-9]{2}\/)[0-9]{4}/g).toString();
 		console.log("sent best wishes anniversary xevery ("+adrecruit+" years) on "+new Date());
-		client.channels.cache.get(id_general_channel).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
+		(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
 	});
 })
 
-client.on('message', async message => {try{
+client.on('messageCreate', async message => {try{
 //	if(message.content == p+'provaprovetta'){
 //		var adrecruit = new Date().getFullYear() - users_plates['426052055589978112'].drecruit.match(/(?![0-9]{2}\/[0-9]{2}\/)[0-9]{4}/g).toString();
 //		console.log("sent best wishes anniversary xevery ("+adrecruit+" years) on "+new Date());
-//		client.channels.cache.get(id_general_channel).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
+//		(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
 //	}
 	//console.log("'message' event received");
 	if(message.content.startsWith(p+'scam')){
@@ -780,13 +797,13 @@ client.on('message', async message => {try{
 			channel_missions_id = id_missions_channel;
 			id_missions = (await db.collection('missions_files').doc('missions').get()).data().id;
 			console.log(id_missions);
-			old_msg = await client.channels.cache.get(channel_missions_id).messages.fetch(id_missions);
+			old_msg = await (await client.channels.fetch(channel_missions_id)).messages.fetch(id_missions);
 			emb = old_msg.embeds[0];
 			new_msg = JSON.parse(JSON.stringify(emb).replace(patt, sub));
 			console.log("old:",old_msg.embeds[0]);
 			console.log("new:",new_msg);
 			if(ok == true){
-				old_msg.edit({embed: new_msg})
+				old_msg.edit(ren([new_msg]))
 			}
 		}
 	}
@@ -882,14 +899,14 @@ client.on('message', async message => {try{
 	if((message.content.match(/\b[^0-9]*69420[^0-9]*\b/) || message.content.match(/\b[^0-9]*42069[^0-9]*\b/)) && message.content.length < 10){
 		message.channel.send("**Noice**");
 	}
-	if(message.mentions.users.find(u=>u.id == bot_id) || (message.channel.type == 'dm' && message.author.id != bot_id)) {
+	if(message.mentions.users.find(u=>u.id == bot_id) || (message.channel.type == ChannelType.DM && message.author.id != bot_id)) {
 		m = message.content.split(/\s+/);
 		regex_foreach = new RegExp('<(@!|@)'+bot_id+'>');
 		m.forEach((e,i,ar)=>{if(e.match(regex_foreach)) {ar.splice(i,1);console.log(ar)}});
 		console.log("pop:"+m[0]);
 		part = m[0].trim();
 		min_len = 1;
-		//if(message.channel.type == 'dm') min_len = 1;
+		//if(message.channel.type == ChannelType.DM) min_len = 1;
 		//else min_len = 1;
 		//console.log(message.channel.type,min_len,m.length);
 		//thanking
@@ -1302,13 +1319,13 @@ client.on('message', async message => {try{
 
 		var minus = await remove_crates(message.author.id);
 		if(minus != 0) {
-			message.channel.send({embed: contenuto_crate}).catch(console.error);
+			message.channel.send(ren([contenuto_crate])).catch(console.error);
 
-			(await client.users.fetch(koray_id)).send({embed: contenuto_crate}).catch(console.error);
-			(await client.users.fetch(triccotricco_id)).send({embed: contenuto_crate}).catch(console.error);
-			(await client.users.fetch(xevery_id)).send({embed: contenuto_crate}).catch(console.error);
-			(await client.users.fetch(lux_id)).send({embed: contenuto_crate}).catch(console.error);
-			(await client.users.fetch(koray2ndaccount_id)).send({embed: contenuto_crate}).catch(console.error);
+			(await client.users.fetch(koray_id)).send(ren([contenuto_crate])).catch(console.error);
+			(await client.users.fetch(triccotricco_id)).send(ren([contenuto_crate])).catch(console.error);
+			(await client.users.fetch(xevery_id)).send(ren([contenuto_crate])).catch(console.error);
+			(await client.users.fetch(lux_id)).send(ren([contenuto_crate])).catch(console.error);
+			(await client.users.fetch(koray2ndaccount_id)).send(ren([contenuto_crate])).catch(console.error);
 			//
 			(await client.users.fetch(koray_id)).send(`a <@${message.author.id}>`).catch(console.error);
 			(await client.users.fetch(triccotricco_id)).send(`a <@${message.author.id}>`).catch(console.error);
@@ -1381,7 +1398,7 @@ client.on('message', async message => {try{
 			giochi_poll = giochi_poll+missioni_gioco+",";
 		}
 		console.log(p+'poll Prossimi giochi per le missioni (le missioni saranno sui 4 giochi più votati);'+giochi_poll.substr(0,giochi_poll.length-1));
-		client.channels.cache.get(id_missions_channel).send(p+'poll Prossimi giochi per le missioni (le missioni saranno sui 4 giochi più votati);'+giochi_poll.substr(0,giochi_poll.length-1));
+		(await client.channels.fetch(id_missions_channel)).send(p+'poll Prossimi giochi per le missioni (le missioni saranno sui 4 giochi più votati);'+giochi_poll.substr(0,giochi_poll.length-1));
 		console.log(`sent poll at ${Date()}`);
 		(await client.users.fetch(koray_id)).send(`sent poll at ${Date()}`);
 		message.delete().then(msg => {var d = Date(); console.log(`Deleted message from ${msg.author.username} at ${d}`)}).catch(console.error);
@@ -1394,8 +1411,8 @@ client.on('message', async message => {try{
 		message.delete().then(msg => {var d = Date(); console.log(`Deleted message from ${msg.author.username} at ${d}`)}).catch(console.error);
 		id_poll = (await db.collection('missions_files').doc('poll').get()).data().id;
 
-		// setTimeout(()=>{
-		poll_msg = await message.channel.messages.fetch(id_poll)
+		// setTimeout(async ()=>{
+		poll_msg = await (await client.channels.fetch(id_poll_channel)).messages.fetch(id_poll)
 		const reactions_map = poll_msg.reactions.cache.map(reaction => reaction.count);//forEach(reaction_obj => console.log(reaction_obj.count));
 		const msg_content = poll_msg.content.split('\n');
 		// console.log(reactions_map);
@@ -1418,33 +1435,35 @@ client.on('message', async message => {try{
 		console.log(array_votes[0].substr(4)+ "_" + array_votes[1].substr(4)+ "_" + array_votes[2].substr(4)+ "_" + array_votes[3].substr(4));
 		if(message.content === 'daily_missions_activate_now') {
 			missions_choose(array_votes[0].substr(4), array_votes[1].substr(4), array_votes[2].substr(4), array_votes[3].substr(4), missions_collection_name, true);
-			setTimeout(async ()=>{ //avviso in #general
-				client.channels.cache.get(id_general_channel).send("@everyone\n\n**NUOVE Missioni Giornaliere disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.");
-				console.log(`sent alert_daily_missions at ${Date()}`);
+			setTimeout(async ()=>{ //avviso in #general daily
+				avviso = (await db.collection('others').doc('new_missions_messages').get()).data().daily;
+				(await client.channels.fetch(id_general_channel)).send(eval(avviso));
+				console.log(`sent alert_daily_missions at ${Date()}: ${avviso}`);
 				(await client.users.fetch(koray_id)).send("check <#437961671018020864> daily");
 				send_missions = true;
 			}, 2000)
 		} else if(message.content === 'missions_activate_now') {
 			missions_choose(array_votes[0].substr(4), array_votes[1].substr(4), array_votes[2].substr(4), array_votes[3].substr(4), missions_collection_name, false);
 			if(ok == true){
-				setTimeout(()=>{ //delete last poll
-					message.channel.messages.fetch(id_poll).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_poll (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
+				setTimeout(async ()=>{ //delete last poll
+					(await client.channels.fetch(id_poll_channel)).messages.fetch(id_poll).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_poll (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
 				}, 2000)
 				id_missions = (await db.collection('missions_files').doc('missions').get()).data().id;
-				setTimeout(()=>{ //delete last missions message
+				setTimeout(async ()=>{ //delete last missions message
 					message.channel.messages.fetch(id_missions).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_missions (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
 				}, 3000)
 				id_daily_missions = (await db.collection('missions_files').doc('missions').get()).data().daily_id;
-				setTimeout(()=>{ //delete last missions message
+				setTimeout(async ()=>{ //delete last missions message
 					message.channel.messages.fetch(id_daily_missions).then(message => message.delete().then(msg => {var d = new Date(); console.log(`del msg_daily_missions (f: ${msg.author.username}) at Y:${d.getFullYear()} m:${d.getMonth()} d:${d.getDay()} - H:${d.getHours()} M:${d.getMinutes()} S:${d.getSeconds()}`)}).catch(console.error)).catch(console.error);
 				}, 3000)
-				setTimeout(()=>{ //poll
-					client.channels.cache.get(id_missions_channel).send('poll_missions_send');
+				setTimeout(async ()=>{ //poll
+					(await client.channels.fetch(id_missions_channel)).send('poll_missions_send');
 					console.log(`sent poll_missions_send at ${Date()}`);
 				}, 5000)
-				setTimeout(async ()=>{ //avviso in #general
-					client.channels.cache.get(id_general_channel).send("@everyone\n\n**NUOVE Missioni Settimanali disponibili!!**\n\nControlla il canale <#437961671018020864> per le sfide, completale per ottenere "+ shadows_icon +" e vota per i giochi della prossima settimana.");
-					console.log(`sent alert_missions at ${Date()}`);
+				setTimeout(async ()=>{ //avviso in #general weekly
+					avviso = (await db.collection('others').doc('new_missions_messages').get()).data().weekly;
+					(await client.channels.fetch(id_general_channel)).send(eval(avviso));
+					console.log(`sent alert_missions at ${Date()}: ${avviso}`);
 					(await client.users.fetch(koray_id)).send("check <#437961671018020864>");
 					send_missions = true;
 				}, 10000)
@@ -1452,6 +1471,7 @@ client.on('message', async message => {try{
 		}
 		console.log("sus")
 	}
+	//console.log(message.content);
 	//for(int ){
 
 	//}
@@ -1468,7 +1488,7 @@ client.on('message', async message => {try{
 //todo// 	
 //todo// 	// Load all invites for all guilds and save them to the cache.
 //todo// 	client.guilds.cache.forEach(g => {
-//todo// 		g.fetchInvites().then(guildInvites => {
+//todo// 		g.invites.fetch().then(guildInvites => {
 //todo// 			invites[g.id] = guildInvites;
 //todo// 		});
 //todo// 	});
@@ -1476,7 +1496,7 @@ client.on('message', async message => {try{
 //todo// client.on('guildMemberAdd', async member => {
 //todo// 	console.log("add");
 //todo// 	// To compare, we need to load the current invite list.
-//todo// 	guildInvites = (await member.guild.fetchInvites())
+//todo// 	guildInvites = (await member.guild.invites.fetch())
 //todo// 	// This is the *existing* invites for the guild.
 //todo// 	const ei = invites[member.guild.id];
 //todo// 	// Update the cached invites for the guild.
@@ -1495,7 +1515,7 @@ client.on('message', async message => {try{
 // client.on('guildMemberRemove', async member => {
 // 	console.log("add");
 // 	// To compare, we need to load the current invite list.
-// 	guildInvites = (await member.guild.fetchInvites())
+// 	guildInvites = (await member.guild.invites.fetch())
 // 	// This is the *existing* invites for the guild.
 // 	const ei = invites[member.guild.id];
 // 	// Update the cached invites for the guild.
