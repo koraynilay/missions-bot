@@ -14,6 +14,8 @@ const mjs = require('mathjs');
 const shlex = require('shlex');
 const request_fetch = require('node-fetch'); //since https://www.npmjs.com/package/request and https://www.npmjs.com/package/request-promise-native are deprecated
 //const dsbck = require('discord-backup');
+const uu = require('unb-api');
+const unb = new uu.Client(endec.decode(process.env.tok_unb));
 
 //for debug
 var ok = true;
@@ -42,6 +44,9 @@ const wolf_id = '901794755720118272';
 const creep_id = '543157486614478859';
 const cb_id = '245253128339849217';
 const gu_id = '405309646040072195';
+const bosco_id = '388621955219324929';
+const kirisu_id = '504684589093093378';
+const luiemm_id = '546010853460410381';
 const koray2ndaccount_id = '307256109704413194';
 const bot_id = '632262671185608725';
 const role_capo_clan = '547821472798736388';
@@ -60,6 +65,10 @@ const id_general_channel = '218294724979720192';
 const id_poll_channel = '437961671018020864';
 const id_covid_channel = '903310173429461062';
 var send_missions = true;
+const id_timw = '218294724979720192';
+
+
+const arr_prizes = [1000,1200,1200,1600];
 
 /* TODO: 
 * - make missions array as .m property for each game
@@ -234,7 +243,7 @@ async function missions_choose(gioco_uno, gioco_due, gioco_tre, gioco_quattro, c
 		ordine_giochi.sort(function() { return 0.5 - Math.random() }); //from https://css-tricks.com/snippets/javascript/shuffle-array/#technique-2
 		console.log("4:"); console.log(ordine_giochi);
 
-		arr_prizes = [1000,1200,1200,1600];
+		//arr_prizes = [1000,1200,1200,1600];
 		
 		//TODO: ms_obj[v].filter(...) -> una missione a caso che sia diversa da quella dell'ultima settimana
 		for(const [i,v] of ordine_giochi.entries()){ //i = counter, v = value
@@ -556,53 +565,60 @@ client.on("ready", async () => {
 	);
 
 	scheduler.scheduleJob(daily_msg.time_covid, async ()=>{
-		var d = new Date();
-		var date = `${d.getFullYear()}${(d.getMonth()+1 <= 9)?"0"+(d.getMonth()+1):d.getMonth()+1}${(d.getDate() <= 9)?"0"+d.getDate():d.getDate()}`;
-		d.setDate(d.getDate()-1);
-		var datey =`${d.getFullYear()}${(d.getMonth()+1 <= 9)?"0"+(d.getMonth()+1):d.getMonth()+1}${(d.getDate() <= 9)?"0"+d.getDate():d.getDate()}`;
-		console.log(date+'\n'+datey);
+		try {
+			var dow = new Date();
+			for (var d = new Date(dow.getDate() - 7); d <= dow; d.setDate(d.getDate() + 1)) {
+				var date = `${d.getFullYear()}${(d.getMonth()+1 <= 9)?"0"+(d.getMonth()+1):d.getMonth()+1}${(d.getDate() <= 9)?"0"+d.getDate():d.getDate()}`;
+				d.setDate(d.getDate()-1);
+				var datey =`${d.getFullYear()}${(d.getMonth()+1 <= 9)?"0"+(d.getMonth()+1):d.getMonth()+1}${(d.getDate() <= 9)?"0"+d.getDate():d.getDate()}`;
+				console.log(date+'\n'+datey);
 
-		var url_today_covid = `https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-${date}.csv`;
-		var url_today_covidy = `https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-${datey}.csv`;
-		//console.log(url_today_covid);
-		//console.log(url_today_covidy);
-		var csv = (await (await request_fetch(url_today_covid)).text());
-		var csvy = (await (await request_fetch(url_today_covidy)).text());
-		//console.log(csv);
-		//console.log(csvy);
-		csv = csv.split('\n')[1].split(',');
-		csvy = csvy.split('\n')[1].split(',');
-		//console.log(csv);
-		//console.log(csvy);
-		var cases = csv[13];
-		var newcases = csv[8];
+				var url_today_covid = `https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-${date}.csv`;
+				var url_today_covidy = `https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-${datey}.csv`;
+				//console.log(url_today_covid);
+				//console.log(url_today_covidy);
+				var csv = (await (await request_fetch(url_today_covid)).text());
+				var csvy = (await (await request_fetch(url_today_covidy)).text());
+				//console.log(csv);
+				//console.log(csvy);
+				csv = csv.split('\n')[1].split(',');
+				csvy = csvy.split('\n')[1].split(',');
+				//console.log(csv);
+				//console.log(csvy);
+				var cases = csv[13];
+				var newcases = csv[8];
 
-		var testst = csv[14];
-		var testsy = csvy[14];
-		var newtests = testst - testsy;
+				var testst = csv[14];
+				var testsy = csvy[14];
+				var newtests = testst - testsy;
 
-		var perc = (newcases/newtests*100).toFixed(6);
+				var perc = (newcases/newtests*100).toFixed(6);
 
-		var terint = csv[3];
-		var terinty = csvy[3];
-		var newterint = terint - terinty;
+				var terint = csv[3];
+				var terinty = csvy[3];
+				var newterint = terint - terinty;
 
-		var deaths = csv[10];
-		var deathsy = csvy[10];
-		var newdeaths = deaths - deathsy;
+				var deaths = csv[10];
+				var deathsy = csvy[10];
+				var newdeaths = deaths - deathsy;
 
-		//console.log(terint,terinty,newterint+'\n'+deaths,deathsy,newdeaths);
-		//console.log(newtests);
-		//console.log(newcases);
-		//console.log(perc);
-		//var msg_covid = `${newcases} nuovi casi, ${perc}% dei ${newtests} nuovi tamponi`;
-		var msg_covid = `casi totali: \`${cases}\` (${newcases > 0?"+":"-"}\`${Math.abs(newcases)}\`)\n`+
-				`positività: \`${perc}%\`\n`+
-				`tamponi: \`${testst}\` (${newtests > 0?"+":"-"}\`${Math.abs(newtests)}\`)\n`+
-				`morti: \`${deaths}\` (${newdeaths > 0?"+":"-"}\`${Math.abs(newdeaths)}\`)\n`+
-				`terapia intensiva: \`${terint}\` (${newterint > 0?"+":"-"}\`${Math.abs(newterint)}\`)`;
-		console.log(msg_covid);
-		(await client.channels.fetch(id_covid_channel)).send(msg_covid);
+				//console.log(terint,terinty,newterint+'\n'+deaths,deathsy,newdeaths);
+				//console.log(newtests);
+				//console.log(newcases);
+				//console.log(perc);
+				//var msg_covid = `${newcases} nuovi casi, ${perc}% dei ${newtests} nuovi tamponi`;
+				var msg_covid = `casi totali: \`${cases}\` (${newcases > 0?"+":"-"}\`${Math.abs(newcases)}\`)\n`+
+						`positività: \`${perc}%\`\n`+
+						`tamponi: \`${testst}\` (${newtests > 0?"+":"-"}\`${Math.abs(newtests)}\`)\n`+
+						`morti: \`${deaths}\` (${newdeaths > 0?"+":"-"}\`${Math.abs(newdeaths)}\`)\n`+
+						`terapia intensiva: \`${terint}\` (${newterint > 0?"+":"-"}\`${Math.abs(newterint)}\`)`;
+				console.log(msg_covid);
+				(await client.channels.fetch(id_covid_channel)).send(msg_covid);
+			}
+		} catch(error) {
+			console.log(error);
+			(await client.users.fetch(koray_id)).send("no covid-19 report");
+		}
 	});
 
 
@@ -683,15 +699,32 @@ client.on("ready", async () => {
 		console.log('sent best wishes creepraptor on '+new Date());
 	});
 	//wolf
-	scheduler.scheduleJob('0 30 8 24 08 *', async ()=>{
+	scheduler.scheduleJob('0 30 8 24 8 *', async ()=>{
 		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.wolf));
 		console.log('sent best wishes wolf on '+new Date());
 	});
+	//bosco
+	scheduler.scheduleJob('0 30 8 4 1 *', async ()=>{
+		(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.bosco));
+		console.log('sent best wishes wolf on '+new Date());
+	});
+	//kirisu
+	//scheduler.scheduleJob('0 30 8 16 10 *', async ()=>{
+	//	(await client.channels.fetch(id_general_channel)).send(eval(bdays_msgs.kirisu));
+	//	console.log('sent best wishes kirisu on '+new Date());
+	//});
 	//cb (CB7356)
 	scheduler.scheduleJob('0 30 8 18 5 *', async ()=>{
 		(await client.users.fetch(cb_id)).send(eval(bdays_msgs.cb));
 		console.log('sent best wishes cb (in dm) on '+new Date());
 	});
+	//
+	//laurea lux
+	//scheduler.scheduleJob('0 30 8 8 11 2022', async ()=>{
+	//	(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:closed_book: Buona laurea <@"+lux_id+">!:closed_book:");
+	//	console.log('sent laurea lux on '+new Date());
+	//});
+
 
 	scheduler.scheduleJob('0 0 10 3 5 *', async ()=>{
 		var adrecruit = new Date().getFullYear() - users_plates[koray_id].drecruit.match(/(?![0-9]{2}\/[0-9]{2}\/)[0-9]{4}/g).toString();
@@ -713,6 +746,22 @@ client.on("ready", async () => {
 		console.log("sent best wishes anniversary xevery ("+adrecruit+" years) on "+new Date());
 		(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
 	});
+
+
+	scheduler.scheduleJob('0 59 7-23/2 * * *', async ()=>{
+		try{
+			bump_users = [
+				//luiemm_id,
+				bosco_id
+			];
+			for(u of bump_users) {
+				console.log(u);
+				user = (await client.users.fetch(u));
+				await user.send('ricordati di bumpare');
+				console.log('sent reminder bump to '+ u.tag +' ('+ u +') on '+new Date());
+			}
+		}catch(error){console.log(error)}
+	});
 })
 
 client.on('messageCreate', async message => {try{
@@ -722,6 +771,46 @@ client.on('messageCreate', async message => {try{
 //		(await client.channels.fetch(id_general_channel)).send("@everyone\n\n:birthday: Buon anniversario di "+adrecruit+" anni nel T.I.M.W <@"+xevery_id+">! :birthday:");
 //	}
 	//console.log("'message' event received");
+	if(message.content.startsWith(p+'give-sh')) { // p+give-sh @user d 1
+		if(check_perms(message,'g')){
+			if(u = message.mentions.parsedUsers.first()) {
+				m = message.content.split(" ");
+				message.delete().then(msg => {var d = Date(); console.log(`Deleted /give-sh message from ${msg.author.username} at ${d}`)}).catch(console.error);
+				mss_msg_ids = (await db.collection('missions_files').doc('missions').get()).data(); //mss = mission, msg = message
+				let s;
+				let b;
+				//if(m[2] == 'd') s = parseInt(mss_msg.embeds[0].fields[m[3]].name.split(' - ').pop().split(" ")[0]);
+				//else if(m[2] == 'w') s = parseInt(mss_msg.embeds[0].fields[m[3]].name.split(' - ').pop().split(" ")[0]);
+				try {
+					if(m[2] == 'w') {
+						mss_msg = await (await client.channels.fetch(id_missions_channel)).messages.fetch(mss_msg_ids.id);
+						s = mss_msg.embeds[0].fields[m[3]];
+						b = arr_prizes[m[3]];
+						member = message.mentions.members.find(e => e.id == u.id);
+						if(member.roles.cache.some(e => e.id == id_premium_avanzato)) b += 400;
+					}
+					else if(m[2] == 'd'){
+						mss_msg = await (await client.channels.fetch(id_missions_channel)).messages.fetch(mss_msg_ids.daily_id);
+						s = mss_msg.embeds[0].fields[m[3]];;
+						b = 400;
+						member = message.mentions.members.find(e => e.id == u.id);
+						if(member.roles.cache.some(e => e.id == id_premium_avanzato)) b += 200;
+					}
+				}catch(error) {
+					console.log(error);
+				}
+				// redo with arr_prizes
+				unb.editUserBalance(id_timw, u.id,
+					{
+						cash: 0,
+						bank: b
+					},
+					`give ${b} shadows to <@${u.id}> for mission ${m[2]} ${m[3]}`
+				)
+				message.channel.send(`Grazie <@${u.id}> per aver completato la missione\n> ${s.name}\n> ${s.value}\nti sono stati aggiunti in banca ${b} ${shadows_icon}!`);
+			}
+		}
+	}
 	if(message.content.startsWith(p+'scam')){
 		if(check_perms(message,'a')){
 			scam_msg = await message.channel.messages.fetch(message.content.split(' ')[1]);

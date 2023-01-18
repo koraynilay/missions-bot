@@ -5,23 +5,25 @@
   "main": "timw_bot.js",
   "scripts": {
     "start": "node timw_bot.js",
-    "dev": "nodemon timw_bot.js --ext js --trace-warnings"
+    "dev": "nodemon timw_bot.js --ext js --trace-warnings",
+    "update-miss": "node ./update_missions.js"
   },
   "keywords": [],
   "author": "koraynilay#5698",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.5.3",
-    "dotenv": "^8.2.0",
-    "firebase-admin": "^9.6.0",
+    "discord.js": "^14.3.0",
+    "dotenv": "^16.0.2",
+    "firebase-admin": "^11.0.1",
     "mathjs": "^9.3.2",
     "node-fetch": "^2.6.1",
     "node-schedule": "^2.0.0",
     "nodemon": "^2.0.7",
     "npm": "^8.x.x",
-    "shlex": "^2.0.2"
+    "shlex": "^2.0.2",
+    "unb-api": "^1.2.3"
   },
   "engines": {
-    "node": "17.x"
+    "node": "18.x"
   }
 }
